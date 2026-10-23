@@ -1,0 +1,233 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "MediaHelper 多媒体自动化管理系统 REST API 文档，支持直接导入 Postman 进行接口联调",
+        "title": "MediaHelper API",
+        "termsOfService": "https://github.com/jackie8tao/mediahelper",
+        "contact": {
+            "name": "Jackie Tao",
+            "url": "https://github.com/jackie8tao/mediahelper"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:9090",
+    "basePath": "/",
+    "paths": {
+        "/api/v1/downloader/torrents": {
+            "get": {
+                "description": "获取下载器 (如 qBittorrent) 当前的所有种子任务信息",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "下载器"
+                ],
+                "summary": "查询下载器任务列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "all",
+                        "description": "任务状态过滤 (all, downloading, completed, paused, active, inactive)",
+                        "name": "filter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "按分类过滤 (如 movie, tv, anime)",
+                        "name": "category",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/history": {
+            "get": {
+                "description": "获取最近的影视整理历史记录",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "归档历史"
+                ],
+                "summary": "查询归档执行历史",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/plugins": {
+            "get": {
+                "description": "获取系统当前加载的所有插件信息及启用状态",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "插件管理"
+                ],
+                "summary": "查询插件列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/status": {
+            "get": {
+                "description": "查询系统配置状态、下载器地址、媒体库路径等",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统基础"
+                ],
+                "summary": "获取系统运行状态",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sync": {
+            "post": {
+                "description": "在后台立即触发一次未整理任务扫描与补漏整理",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "任务调度"
+                ],
+                "summary": "手动触发全量同步",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/webhook/qbittorrent": {
+            "post": {
+                "description": "供 qBittorrent 下载完成后调用外部命令或 API 实时触发整理",
+                "consumes": [
+                    "application/json",
+                    "application/x-www-form-urlencoded"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhook"
+                ],
+                "summary": "qBittorrent 任务完成实时通知 Webhook",
+                "parameters": [
+                    {
+                        "description": "种子信息 JSON 载荷",
+                        "name": "payload",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/server.QBWebhookPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "检测系统运行状态及时间戳",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统基础"
+                ],
+                "summary": "服务探活接口",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "server.QBWebhookPayload": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "content_path": {
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "save_path": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

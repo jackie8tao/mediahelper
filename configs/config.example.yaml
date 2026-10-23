@@ -1,0 +1,74 @@
+# MediaHelper 配置文件示例
+server:
+  host: "0.0.0.0"
+  port: 9090
+
+# 数据库存储配置
+database:
+  dsn: "data/mediahelper.db"
+
+# qBittorrent 客户端配置
+qbittorrent:
+  enabled: true
+  url: "http://127.0.0.1:8080"
+  username: "admin"
+  password: "adminadmin"
+  # 监控的分类列表 (区分大小写)，为空时监控所有分类
+  categories:
+    - "movie"
+    - "tv"
+    - "anime"
+  # 自动回写标签
+  auto_tag: true
+  success_tag: "MediaHelper:Done"
+  fail_tag: "MediaHelper:Error"
+  # 轮询时间间隔 (秒)
+  poll_interval: 30
+  # 路径映射规则 (当 qBittorrent 与 MediaHelper 运行在不同容器或系统路径不一致时启用)
+  path_mappings:
+    - remote: "/downloads"
+      local: "D:/Downloads"
+
+# TMDB 刮削配置
+tmdb:
+  api_key: "your_tmdb_api_key_here"
+  # API 根地址 (国内可配置反代加速域名，如 https://api.tmdb.org/3)
+  base_url: "https://api.themoviedb.org/3"
+  # 图片 CDN 地址
+  image_base_url: "https://image.tmdb.org/t/p/original"
+  # 优先语言
+  language: "zh-CN"
+  # 网络代理 (如 http://127.0.0.1:7890，如无代理需求留空)
+  proxy: ""
+  # 是否生成符合 Jellyfin/Plex 规范的 .nfo 文件
+  generate_nfo: true
+  # 是否下载海报封面 (poster.jpg, fanart.jpg)
+  download_images: true
+
+# 媒体库整理与归档配置
+library:
+  # 电影输出媒体库根目录
+  movie_dir: "D:/Media/Movies"
+  # 电视剧输出媒体库根目录
+  tv_dir: "D:/Media/TV"
+  # 动漫输出媒体库根目录 (留空时将合并存入 tv_dir)
+  anime_dir: "D:/Media/Anime"
+  # 整理模式: hardlink (硬链接，推荐), copy (复制), move (移动), symlink (软链接)
+  link_mode: "hardlink"
+  # 最小视频文件过滤阈值 (字节，默认 50MB，过滤掉样品样片与广告)
+  min_file_size: 52428800
+
+# 插件系统配置
+plugins:
+  enabled: true
+  items:
+    # 插件 1: Jellyfin 媒体库自动刷新
+    jellyfin_refresh:
+      enabled: false
+      server_url: "http://127.0.0.1:8096"
+      api_key: "your_jellyfin_api_key_here"
+
+    # 插件 2: Webhook / 微信 / 自定义通知推送
+    webhook_notify:
+      enabled: false
+      webhook_url: "https://your-webhook-endpoint.com/api"
