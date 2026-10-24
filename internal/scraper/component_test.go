@@ -123,7 +123,7 @@ func TestScraperComponent_RegisterComponents(t *testing.T) {
 		return &mockScraper{}, nil
 	})
 
-	cfg := &config.Config{
+	cfg := &config.ComponentConfig{
 		Scrapers: []config.ScraperInstanceConfig{
 			{ID: "scraper:movie", Type: "mock", Name: "Movie Scraper", Enabled: true},
 			{ID: "scraper:tv", Type: "mock", Name: "TV Scraper", Enabled: true},

@@ -231,7 +231,7 @@ func (c *DownloaderComponent) handleTestConnection(ctx context.Context, sCtx *pi
 
 // RegisterComponents instantiates downloader components according to system configuration
 // and registers each enabled instance into the provided ComponentRegistry.
-func RegisterComponents(cfg *config.Config, registry *pipeline.ComponentRegistry) ([]*DownloaderComponent, error) {
+func RegisterComponents(cfg *config.ComponentConfig, registry *pipeline.ComponentRegistry) ([]*DownloaderComponent, error) {
 	if registry == nil {
 		return nil, fmt.Errorf("component registry cannot be nil")
 	}

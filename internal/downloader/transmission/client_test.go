@@ -158,9 +158,6 @@ func TestTransmissionClient(t *testing.T) {
 		Enabled:    true,
 		URL:        srv.URL,
 		Categories: []string{"movie", "tv"},
-		PathMappings: []config.PathMapping{
-			{Remote: "/downloads", Local: "/local/downloads"},
-		},
 	}
 
 	// 1. Factory check

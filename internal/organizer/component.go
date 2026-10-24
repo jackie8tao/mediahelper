@@ -230,7 +230,7 @@ func (o *OrganizerComponent) resolveTask(sCtx *pipeline.StepContext) OrganizeTas
 }
 
 // RegisterComponents registers configured organizer instances into the pipeline registry.
-func RegisterComponents(cfg *config.Config, registry *pipeline.ComponentRegistry, scraperSvc scraper.Scraper) ([]*OrganizerComponent, error) {
+func RegisterComponents(cfg *config.ComponentConfig, registry *pipeline.ComponentRegistry) ([]*OrganizerComponent, error) {
 	if registry == nil {
 		return nil, fmt.Errorf("component registry cannot be nil")
 	}
@@ -244,7 +244,7 @@ func RegisterComponents(cfg *config.Config, registry *pipeline.ComponentRegistry
 			continue
 		}
 
-		org := NewOrganizerFromInstance(orgCfg, scraperSvc)
+		org := NewOrganizerFromInstance(orgCfg, nil)
 		comp := NewComponent(orgCfg, org)
 
 		if err := registry.Register(comp); err != nil {

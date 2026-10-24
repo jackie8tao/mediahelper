@@ -151,7 +151,7 @@ func TestClient_AllOperations(t *testing.T) {
 		Username:   "admin",
 		Password:   "secret123",
 		Categories: []string{"movie", "tv"},
-		PathMappings: []config.PathMapping{
+		PathMappings: []config.PathMapperInstanceConfig{
 			{
 				Remote: "/downloads",
 				Local:  "D:/LocalDownloads",

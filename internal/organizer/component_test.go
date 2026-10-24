@@ -123,7 +123,7 @@ func TestOrganizerComponent_Execute(t *testing.T) {
 }
 
 func TestOrganizerComponent_RegisterComponents(t *testing.T) {
-	cfg := &config.Config{
+	cfg := &config.ComponentConfig{
 		Organizers: []config.OrganizerInstanceConfig{
 			{ID: "organizer:movie", Name: "Movie Organizer", MovieDir: "/data/movies", Enabled: true},
 			{ID: "organizer:tv", Name: "TV Organizer", TVDir: "/data/tv", Enabled: true},
@@ -132,7 +132,7 @@ func TestOrganizerComponent_RegisterComponents(t *testing.T) {
 	}
 
 	registry := pipeline.NewComponentRegistry()
-	comps, err := RegisterComponents(cfg, registry, nil)
+	comps, err := RegisterComponents(cfg, registry)
 	require.NoError(t, err)
 	assert.Len(t, comps, 2)
 

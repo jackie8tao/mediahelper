@@ -22,7 +22,7 @@ import (
 
 // Server manages HTTP Web, REST APIs, and Webhook endpoints.
 type Server struct {
-	cfg          *config.Config
+	cfg          *config.SystemConfig
 	engine       *pipeline.Engine
 	compRegistry *pipeline.ComponentRegistry
 	pluginMgr    *plugin.Manager
@@ -32,12 +32,7 @@ type Server struct {
 }
 
 // New creates a new Server instance.
-func New(
-	cfg *config.Config,
-	engine *pipeline.Engine,
-	compRegistry *pipeline.ComponentRegistry,
-	pluginMgr *plugin.Manager,
-) *Server {
+func New(cfg *config.SystemConfig, engine *pipeline.Engine, compRegistry *pipeline.ComponentRegistry, pluginMgr *plugin.Manager) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	router.Use(gin.Recovery())
@@ -51,7 +46,6 @@ func New(
 		engine:       engine,
 		compRegistry: compRegistry,
 		pluginMgr:    pluginMgr,
-		pathMapper:   pathmapper.NewPathMapper(cfg.GetPathMappings()),
 		router:       router,
 	}
 
@@ -134,12 +128,9 @@ func (s *Server) handleStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0,
 		"data": gin.H{
-			"app":               "MediaHelper",
-			"version":           "1.0.0",
-			"components_count":  compCount,
-			"link_mode":         s.cfg.Library.LinkMode,
-			"movie_library_dir": s.cfg.Library.MovieDir,
-			"tv_library_dir":    s.cfg.Library.TVDir,
+			"app":              "MediaHelper",
+			"version":          "1.0.0",
+			"components_count": compCount,
 		},
 	})
 }

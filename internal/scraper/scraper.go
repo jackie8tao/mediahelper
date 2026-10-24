@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/jackie8tao/mediahelper/internal/config"
 	"github.com/jackie8tao/mediahelper/internal/parser"
 )
 
@@ -28,15 +27,13 @@ type TMDBScraperClient interface {
 
 // Service 刮削服务协调器
 type Service struct {
-	cfg        config.TMDBConfig
 	tmdbClient TMDBScraperClient
 	httpClient *http.Client
 }
 
 // NewService 创建刮削服务实例
-func NewService(cfg config.TMDBConfig, tmdbClient TMDBScraperClient) *Service {
+func NewService(tmdbClient TMDBScraperClient) *Service {
 	return &Service{
-		cfg:        cfg,
 		tmdbClient: tmdbClient,
 		httpClient: &http.Client{},
 	}

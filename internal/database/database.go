@@ -14,9 +14,6 @@ import (
 
 // InitDB initializes SQLite database connection and runs auto migrations.
 func InitDB(dsn string) (*gorm.DB, error) {
-	if dsn == "" {
-		dsn = "data/mediahelper.db"
-	}
 
 	// In-memory databases are often used for unit tests (:memory:)
 	isMemory := strings.Contains(dsn, ":memory:")
@@ -36,7 +33,10 @@ func InitDB(dsn string) (*gorm.DB, error) {
 			if strings.Contains(dsn, "?") {
 				delimiter = "&"
 			}
-			dsn = fmt.Sprintf("%s%s_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)", dsn, delimiter)
+			dsn = fmt.Sprintf(
+				"%s%s_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)",
+				dsn, delimiter,
+			)
 		}
 	}
 

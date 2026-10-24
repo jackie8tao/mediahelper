@@ -28,7 +28,7 @@ func init() {
 		if err != nil {
 			return nil, err
 		}
-		return scraper.NewService(cfg.ToTMDBConfig(), tmdbCli), nil
+		return scraper.NewService(tmdbCli), nil
 	})
 }
 

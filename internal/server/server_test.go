@@ -19,7 +19,7 @@ import (
 
 type mockDownloader struct{}
 
-func (m *mockDownloader) Name() string                            { return "mock" }
+func (m *mockDownloader) Name() string                             { return "mock" }
 func (m *mockDownloader) TestConnection(ctx context.Context) error { return nil }
 func (m *mockDownloader) GetAllTorrents(ctx context.Context, filter, category string) ([]downloader.Torrent, error) {
 	return []downloader.Torrent{
@@ -42,7 +42,7 @@ func (m *mockDownloader) RemoveTags(ctx context.Context, hashes []string, tags [
 }
 
 func TestServerRoutes(t *testing.T) {
-	cfg := config.DefaultConfig()
+	cfg := config.DefaultSystemConfig()
 	db, err := database.InitDB(":memory:")
 	require.NoError(t, err)
 
@@ -59,7 +59,7 @@ func TestServerRoutes(t *testing.T) {
 	require.NoError(t, err)
 
 	engine := pipeline.NewEngine(db, registry)
-	err = pipeline.SeedDefaultPipelines(context.Background(), engine.Repo(), cfg)
+	err = pipeline.SeedDefaultPipelines(context.Background(), engine.Repo())
 	require.NoError(t, err)
 
 	pluginMgr := plugin.NewManager()

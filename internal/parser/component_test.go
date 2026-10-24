@@ -100,7 +100,7 @@ func TestParserComponent_Execute(t *testing.T) {
 }
 
 func TestParserComponent_RegisterComponents(t *testing.T) {
-	cfg := &config.Config{
+	cfg := &config.ComponentConfig{
 		Parsers: []config.ParserInstanceConfig{
 			{ID: "parser:movie", Name: "Movie Parser", Enabled: true, DefaultMediaType: "movie"},
 			{ID: "parser:anime", Name: "Anime Parser", Enabled: true, DefaultMediaType: "anime"},

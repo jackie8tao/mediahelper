@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/jackie8tao/mediahelper/internal/config"
 	"github.com/jackie8tao/mediahelper/internal/database"
 )
 
 // SeedDefaultPipelines checks whether any pipelines exist; if empty, it seeds the default organize workflow.
-func SeedDefaultPipelines(ctx context.Context, repo *Repository, cfg *config.Config) error {
+func SeedDefaultPipelines(ctx context.Context, repo *Repository) error {
 	existing, err := repo.ListPipelines(false)
 	if err != nil {
 		return fmt.Errorf("check existing pipelines error: %w", err)

@@ -136,9 +136,6 @@ func TestAria2Client(t *testing.T) {
 		URL:        srv.URL,
 		Password:   secret,
 		Categories: []string{"movie", "tv"},
-		PathMappings: []config.PathMapping{
-			{Remote: "/downloads", Local: "/local/downloads"},
-		},
 	}
 
 	// 1. Factory check

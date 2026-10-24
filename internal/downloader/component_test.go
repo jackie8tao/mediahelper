@@ -217,7 +217,7 @@ func TestDownloaderComponent_Execute(t *testing.T) {
 func TestRegisterComponents(t *testing.T) {
 	// 1. Multiple configured downloaders
 	t.Run("MultipleDownloadersConfig", func(t *testing.T) {
-		cfg := &config.Config{
+		cfg := &config.ComponentConfig{
 			Downloaders: []config.DownloaderInstanceConfig{
 				{
 					ID:       "downloader:movie",
@@ -271,35 +271,9 @@ func TestRegisterComponents(t *testing.T) {
 		}
 	})
 
-	// 2. Single legacy QBittorrent config auto-fallback
-	t.Run("SingleLegacyQBittorrentConfig", func(t *testing.T) {
-		cfg := &config.Config{
-			QBittorrent: config.QBittorrentConfig{
-				Enabled:  true,
-				URL:      "http://127.0.0.1:8080",
-				Username: "admin",
-			},
-		}
-
-		registry := pipeline.NewComponentRegistry()
-		comps, err := RegisterComponents(cfg, registry)
-		if err != nil {
-			t.Fatalf("RegisterComponents error: %v", err)
-		}
-
-		if len(comps) != 1 {
-			t.Fatalf("expected 1 component, got %d", len(comps))
-		}
-
-		c, ok := registry.Get("downloader")
-		if !ok || c == nil {
-			t.Errorf("expected 'downloader' registered in component registry")
-		}
-	})
-
 	// 3. Error on nil registry
 	t.Run("NilRegistry", func(t *testing.T) {
-		cfg := config.DefaultConfig()
+		cfg := config.DefaultComponentConfig()
 		_, err := RegisterComponents(cfg, nil)
 		if err == nil {
 			t.Errorf("expected error on nil registry")

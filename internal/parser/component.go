@@ -177,7 +177,7 @@ func (p *ParserComponent) resolveRawInput(sCtx *pipeline.StepContext) string {
 }
 
 // RegisterComponents registers configured parser instances into the pipeline registry.
-func RegisterComponents(cfg *config.Config, registry *pipeline.ComponentRegistry) ([]*ParserComponent, error) {
+func RegisterComponents(cfg *config.ComponentConfig, registry *pipeline.ComponentRegistry) ([]*ParserComponent, error) {
 	if registry == nil {
 		return nil, fmt.Errorf("component registry cannot be nil")
 	}

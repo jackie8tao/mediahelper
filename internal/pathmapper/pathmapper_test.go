@@ -13,7 +13,7 @@ import (
 )
 
 func TestPathMapper_ToLocal(t *testing.T) {
-	mappings := []config.PathMapping{
+	mappings := []config.PathMapperInstanceConfig{
 		{Remote: "/downloads", Local: "D:/LocalDownloads"},
 		{Remote: "/data/media", Local: "/mnt/storage/media"},
 	}
@@ -34,7 +34,7 @@ func TestPathMapper_ToLocal(t *testing.T) {
 }
 
 func TestPathMapper_ToRemote(t *testing.T) {
-	mappings := []config.PathMapping{
+	mappings := []config.PathMapperInstanceConfig{
 		{Remote: "/downloads", Local: "D:/LocalDownloads"},
 	}
 
@@ -45,7 +45,7 @@ func TestPathMapper_ToRemote(t *testing.T) {
 }
 
 func TestPathMapper_MapTorrent(t *testing.T) {
-	mappings := []config.PathMapping{
+	mappings := []config.PathMapperInstanceConfig{
 		{Remote: "/downloads", Local: "/local/downloads"},
 	}
 	mapper := NewPathMapper(mappings)
@@ -63,7 +63,7 @@ func TestPathMapper_MapTorrent(t *testing.T) {
 }
 
 func TestComponent_Execute(t *testing.T) {
-	mappings := []config.PathMapping{
+	mappings := []config.PathMapperInstanceConfig{
 		{Remote: "/downloads", Local: "/local/downloads"},
 	}
 	mapper := NewPathMapper(mappings)
@@ -112,8 +112,8 @@ func TestComponent_Execute(t *testing.T) {
 }
 
 func TestRegisterComponent(t *testing.T) {
-	cfg := &config.Config{
-		PathMappings: []config.PathMapping{
+	cfg := &config.ComponentConfig{
+		PathMappings: []config.PathMapperInstanceConfig{
 			{Remote: "/downloads", Local: "/local"},
 		},
 	}

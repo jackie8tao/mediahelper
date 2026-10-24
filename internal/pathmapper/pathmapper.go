@@ -14,11 +14,11 @@ import (
 
 // PathMapper translates remote/container paths into local accessible filesystem paths.
 type PathMapper struct {
-	mappings []config.PathMapping
+	mappings []config.PathMapperInstanceConfig
 }
 
 // NewPathMapper creates a new PathMapper instance from configured mapping rules.
-func NewPathMapper(mappings []config.PathMapping) *PathMapper {
+func NewPathMapper(mappings []config.PathMapperInstanceConfig) *PathMapper {
 	return &PathMapper{mappings: mappings}
 }
 
@@ -211,7 +211,7 @@ func (c *Component) Execute(ctx context.Context, sCtx *pipeline.StepContext) (ma
 }
 
 // RegisterComponent instantiates and registers the path mapper component into the pipeline registry.
-func RegisterComponent(cfg *config.Config, registry *pipeline.ComponentRegistry) (*Component, error) {
+func RegisterComponent(cfg *config.ComponentConfig, registry *pipeline.ComponentRegistry) (*Component, error) {
 	if registry == nil {
 		return nil, fmt.Errorf("component registry is nil")
 	}

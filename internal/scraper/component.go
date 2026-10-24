@@ -159,7 +159,7 @@ func (s *ScraperComponent) resolveMediaInfo(sCtx *pipeline.StepContext) *parser.
 }
 
 // RegisterComponents registers configured scraper instances into the pipeline registry.
-func RegisterComponents(cfg *config.Config, registry *pipeline.ComponentRegistry) ([]*ScraperComponent, error) {
+func RegisterComponents(cfg *config.ComponentConfig, registry *pipeline.ComponentRegistry) ([]*ScraperComponent, error) {
 	if registry == nil {
 		return nil, fmt.Errorf("component registry cannot be nil")
 	}

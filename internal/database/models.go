@@ -110,9 +110,7 @@ type StepExecution struct {
 
 // SystemSetting represents a persistent system configuration key-value item.
 type SystemSetting struct {
-	Key         string    `gorm:"primaryKey;size:128;not null" json:"key"`
-	Value       string    `gorm:"type:text;not null" json:"value"`
-	Category    string    `gorm:"size:64;index" json:"category"`
-	Description string    `gorm:"size:512" json:"description"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	Key       string    `gorm:"primaryKey;size:128;not null" json:"key"`
+	Value     string    `gorm:"type:text;not null" json:"value"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
