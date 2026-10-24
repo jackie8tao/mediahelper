@@ -26,8 +26,9 @@ import (
 	"github.com/jackie8tao/mediahelper/internal/config"
 	"github.com/jackie8tao/mediahelper/internal/database"
 	"github.com/jackie8tao/mediahelper/internal/downloader"
-	"github.com/jackie8tao/mediahelper/internal/downloader/qbittorrent"
+	_ "github.com/jackie8tao/mediahelper/internal/downloader/qbittorrent"
 	"github.com/jackie8tao/mediahelper/internal/organizer"
+	"github.com/jackie8tao/mediahelper/internal/pipeline"
 	"github.com/jackie8tao/mediahelper/internal/plugin"
 	"github.com/jackie8tao/mediahelper/internal/scraper"
 	"github.com/jackie8tao/mediahelper/internal/scraper/tmdb"
@@ -74,23 +75,24 @@ func main() {
 		}
 	}
 
-	// 3. 初始化下载器 (qBittorrent)
+	// 4. 初始化流水线组件注册中心并根据配置载入下载器组件
+	compRegistry := pipeline.NewComponentRegistry()
+	dlComps, err := downloader.RegisterComponents(cfg, compRegistry)
+	if err != nil {
+		slog.Error("Failed to register downloader components", "error", err)
+	}
+
 	var dl downloader.Downloader
-	if cfg.QBittorrent.Enabled {
-		qbClient, err := qbittorrent.NewClient(cfg.QBittorrent)
-		if err != nil {
-			slog.Error("Failed to initialize qBittorrent client", "error", err)
-		} else {
-			dl = qbClient
-			// 异步尝试连通性校验，避免阻塞主服务启动
-			go func() {
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				defer cancel()
-				if err := dl.TestConnection(ctx); err != nil {
-					slog.Warn("qBittorrent connection test failed (will retry when running)", "error", err)
-				}
-			}()
-		}
+	if len(dlComps) > 0 {
+		dl = dlComps[0].Downloader()
+		// 异步尝试连通性校验，避免阻塞主服务启动
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := dl.TestConnection(ctx); err != nil {
+				slog.Warn("Downloader connection test failed (will retry when running)", "error", err)
+			}
+		}()
 	}
 
 	// 3. 初始化 TMDB 刮削器
@@ -123,18 +125,27 @@ func main() {
 	_ = pluginMgr.StartAll(context.Background())
 
 	// 6. 初始化核心流水线协调器
-	pipeline := service.NewPipeline(cfg, dl, scraperSvc, org, pluginMgr)
+	pipelineSvc := service.NewPipeline(cfg, dl, scraperSvc, org, pluginMgr)
 
-	// 7. 启动后台定时同步 Worker
+	// 7. 启动流水线引擎 (负责自愈与 Cron 调度)
+	var pipelineEngine *pipeline.Engine
+	if db != nil {
+		pipelineEngine = pipeline.NewEngine(db, compRegistry)
+		if err := pipelineEngine.Start(context.Background()); err != nil {
+			slog.Error("Failed to start pipeline engine", "error", err)
+		}
+	}
+
+	// 8. 启动后台定时同步 Worker
 	workerCtx, cancelWorker := context.WithCancel(context.Background())
 	defer cancelWorker()
 
 	if dl != nil && cfg.QBittorrent.Enabled {
-		go pipeline.StartBackgroundWorker(workerCtx)
+		go pipelineSvc.StartBackgroundWorker(workerCtx)
 	}
 
-	// 8. 启动 HTTP API & Webhook Web 服务
-	srv := server.New(cfg, pipeline)
+	// 9. 启动 HTTP API & Webhook Web 服务
+	srv := server.New(cfg, pipelineSvc)
 	go func() {
 		if err := srv.Start(); err != nil {
 			slog.Error("HTTP Server failed to start", "error", err)
@@ -143,12 +154,17 @@ func main() {
 
 	slog.Info("MediaHelper running successfully", "port", cfg.Server.Port)
 
-	// 9. 监听系统信号优雅关停
+	// 10. 监听系统信号优雅关停
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
 	slog.Info("Shutting down MediaHelper gracefully...")
+
+	// 停止流水线引擎
+	if pipelineEngine != nil {
+		pipelineEngine.Stop()
+	}
 
 	// 取消后台 Worker
 	cancelWorker()

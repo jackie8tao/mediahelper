@@ -17,6 +17,7 @@ const (
 	SectionServer      = "server"
 	SectionDatabase    = "database"
 	SectionQBittorrent = "qbittorrent"
+	SectionDownloaders = "downloaders"
 	SectionTMDB        = "tmdb"
 	SectionLibrary     = "library"
 	SectionPlugins     = "plugins"
@@ -48,7 +49,7 @@ func LoadFromDB(db *gorm.DB) (*Config, error) {
 
 	// Verify that at least one core configuration section exists
 	hasSection := false
-	for _, sec := range []string{SectionServer, SectionDatabase, SectionQBittorrent, SectionTMDB, SectionLibrary, SectionPlugins} {
+	for _, sec := range []string{SectionServer, SectionDatabase, SectionQBittorrent, SectionDownloaders, SectionTMDB, SectionLibrary, SectionPlugins} {
 		if _, exists := settingsMap[sec]; exists {
 			hasSection = true
 			break
@@ -69,6 +70,9 @@ func LoadFromDB(db *gorm.DB) (*Config, error) {
 	}
 	if val, ok := settingsMap[SectionQBittorrent]; ok && strings.TrimSpace(val) != "" {
 		_ = json.Unmarshal([]byte(val), &cfg.QBittorrent)
+	}
+	if val, ok := settingsMap[SectionDownloaders]; ok && strings.TrimSpace(val) != "" {
+		_ = json.Unmarshal([]byte(val), &cfg.Downloaders)
 	}
 	if val, ok := settingsMap[SectionTMDB]; ok && strings.TrimSpace(val) != "" {
 		_ = json.Unmarshal([]byte(val), &cfg.TMDB)
@@ -104,6 +108,7 @@ func SaveToDB(db *gorm.DB, cfg *Config) error {
 		{SectionServer, "server", "HTTP server configuration", cfg.Server},
 		{SectionDatabase, "database", "Database connection configuration", cfg.Database},
 		{SectionQBittorrent, "downloader", "qBittorrent client configuration", cfg.QBittorrent},
+		{SectionDownloaders, "downloader", "Configured downloaders list", cfg.Downloaders},
 		{SectionTMDB, "scraper", "TMDB metadata scraping configuration", cfg.TMDB},
 		{SectionLibrary, "library", "Media library directory and link mode configuration", cfg.Library},
 		{SectionPlugins, "plugins", "Plugin manager configuration", cfg.Plugins},

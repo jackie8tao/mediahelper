@@ -15,7 +15,7 @@ import (
 func setupMockQBSrv(t *testing.T) *httptest.Server {
 	mux := http.NewServeMux()
 
-	// 1. 登录认证接口
+	// 1. Authentication endpoint
 	mux.HandleFunc("/api/v2/auth/login", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -38,13 +38,13 @@ func setupMockQBSrv(t *testing.T) *httptest.Server {
 		}
 	})
 
-	// 2. 版本获取接口
+	// 2. Version endpoint
 	mux.HandleFunc("/api/v2/app/version", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("v5.0.1"))
 	})
 
-	// 3. 种子列表接口
+	// 3. Torrents list endpoint
 	mux.HandleFunc("/api/v2/torrents/info", func(w http.ResponseWriter, r *http.Request) {
 		torrents := []map[string]interface{}{
 			{
@@ -89,7 +89,7 @@ func setupMockQBSrv(t *testing.T) *httptest.Server {
 		_ = json.NewEncoder(w).Encode(torrents)
 	})
 
-	// 4. 种子文件详情接口
+	// 4. Torrent files endpoint
 	mux.HandleFunc("/api/v2/torrents/files", func(w http.ResponseWriter, r *http.Request) {
 		hash := r.URL.Query().Get("hash")
 		if hash == "hash_tv_1" {
@@ -115,7 +115,7 @@ func setupMockQBSrv(t *testing.T) *httptest.Server {
 		http.NotFound(w, r)
 	})
 
-	// 5. 添加标签接口
+	// 5. Add tags endpoint
 	mux.HandleFunc("/api/v2/torrents/addTags", func(w http.ResponseWriter, r *http.Request) {
 		_ = r.ParseForm()
 		hashes := r.FormValue("hashes")
@@ -127,7 +127,7 @@ func setupMockQBSrv(t *testing.T) *httptest.Server {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	// 6. 移除标签接口
+	// 6. Remove tags endpoint
 	mux.HandleFunc("/api/v2/torrents/removeTags", func(w http.ResponseWriter, r *http.Request) {
 		_ = r.ParseForm()
 		hashes := r.FormValue("hashes")
@@ -168,7 +168,7 @@ func TestClient_AllOperations(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// 1. 测试连通性
+	// 1. Test connection
 	t.Run("TestConnection", func(t *testing.T) {
 		err := client.TestConnection(ctx)
 		if err != nil {
@@ -176,7 +176,7 @@ func TestClient_AllOperations(t *testing.T) {
 		}
 	})
 
-	// 1.5 测试获取所有种子任务
+	// 1.5 Test fetching all torrent tasks
 	t.Run("GetAllTorrents", func(t *testing.T) {
 		torrents, err := client.GetAllTorrents(ctx, "all", "")
 		if err != nil {
@@ -187,14 +187,14 @@ func TestClient_AllOperations(t *testing.T) {
 		}
 	})
 
-	// 2. 测试获取已完成种子并校验分类过滤与路径映射
+	// 2. Test fetching completed torrents with category filter and path mapping
 	t.Run("GetCompletedTorrents with Category Filtering and Path Mapping", func(t *testing.T) {
 		torrents, err := client.GetCompletedTorrents(ctx, []string{"movie", "tv"})
 		if err != nil {
 			t.Fatalf("GetCompletedTorrents failed: %v", err)
 		}
 
-		// 应该只保留 movie 和 tv，software 被过滤
+		// Should retain movie and tv, software filtered out
 		if len(torrents) != 2 {
 			t.Fatalf("expected 2 torrents, got %d", len(torrents))
 		}
@@ -214,7 +214,7 @@ func TestClient_AllOperations(t *testing.T) {
 		}
 	})
 
-	// 3. 测试获取单个种子包含的文件
+	// 3. Test getting torrent file details
 	t.Run("GetTorrentFiles", func(t *testing.T) {
 		files, err := client.GetTorrentFiles(ctx, "hash_tv_1")
 		if err != nil {
@@ -230,7 +230,7 @@ func TestClient_AllOperations(t *testing.T) {
 		}
 	})
 
-	// 4. 测试打标签与去标签
+	// 4. Test adding and removing tags
 	t.Run("AddTags and RemoveTags", func(t *testing.T) {
 		err := client.AddTags(ctx, []string{"hash_tv_1"}, []string{"MediaHelper:Done"})
 		if err != nil {

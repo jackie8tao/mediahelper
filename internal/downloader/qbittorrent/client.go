@@ -11,14 +11,20 @@ import (
 	"github.com/jackie8tao/mediahelper/internal/downloader"
 )
 
-// Client 封装 autobrr/go-qbittorrent 客户端，实现 downloader.Downloader 接口
+// Client wraps autobrr/go-qbittorrent and implements downloader.Downloader.
 type Client struct {
 	cfg        config.QBittorrentConfig
 	client     *qb.Client
 	pathMapper *downloader.PathMapper
 }
 
-// NewClient 初始化 qBittorrent 客户端
+func init() {
+	downloader.RegisterFactory("qbittorrent", func(cfg config.DownloaderInstanceConfig) (downloader.Downloader, error) {
+		return NewClient(cfg.ToQBittorrentConfig())
+	})
+}
+
+// NewClient initializes a new qBittorrent client instance.
 func NewClient(cfg config.QBittorrentConfig) (*Client, error) {
 	if cfg.URL == "" {
 		return nil, fmt.Errorf("qbittorrent URL is required")
@@ -48,19 +54,19 @@ func NewClient(cfg config.QBittorrentConfig) (*Client, error) {
 	}, nil
 }
 
-// Name 返回下载器名称
+// Name returns the downloader name.
 func (c *Client) Name() string {
 	return "qBittorrent"
 }
 
-// TestConnection 测试与 qBittorrent WebUI 的连通性和登录认证
+// TestConnection verifies connectivity and authentication with qBittorrent WebUI.
 func (c *Client) TestConnection(ctx context.Context) error {
-	// 尝试登录认证
+	// Attempt login
 	if err := c.client.LoginCtx(ctx); err != nil {
 		return fmt.Errorf("qbittorrent login failed: %w", err)
 	}
 
-	// 获取版本号验证 API 可用性
+	// Fetch version to confirm API responsiveness
 	version, err := c.client.GetAppVersionCtx(ctx)
 	if err != nil {
 		return fmt.Errorf("qbittorrent get version failed: %w", err)
@@ -70,7 +76,7 @@ func (c *Client) TestConnection(ctx context.Context) error {
 	return nil
 }
 
-// GetAllTorrents 获取下载器当前所有种子任务 (支持按状态 filter 与分类 category 筛选)
+// GetAllTorrents returns all torrents matching state filter and category.
 func (c *Client) GetAllTorrents(ctx context.Context, filter string, category string) ([]downloader.Torrent, error) {
 	opts := qb.TorrentFilterOptions{}
 	if filter != "" && filter != "all" {
@@ -95,9 +101,9 @@ func (c *Client) GetAllTorrents(ctx context.Context, filter string, category str
 	return result, nil
 }
 
-// GetCompletedTorrents 获取符合分类要求的已完成种子
+// GetCompletedTorrents returns completed torrents matching the specified categories.
 func (c *Client) GetCompletedTorrents(ctx context.Context, categories []string) ([]downloader.Torrent, error) {
-	// 查询 filter=completed 的种子任务
+	// Query completed torrents
 	opts := qb.TorrentFilterOptions{
 		Filter: qb.TorrentFilterCompleted,
 	}
@@ -107,7 +113,7 @@ func (c *Client) GetCompletedTorrents(ctx context.Context, categories []string) 
 		return nil, fmt.Errorf("get completed torrents error: %w", err)
 	}
 
-	// 构建允许的分类集合 (用于快速查找)
+	// Build allowed categories lookup set
 	allowedCategories := make(map[string]struct{})
 	for _, cat := range categories {
 		cat = strings.TrimSpace(cat)
@@ -118,7 +124,7 @@ func (c *Client) GetCompletedTorrents(ctx context.Context, categories []string) 
 
 	var result []downloader.Torrent
 	for _, t := range torrents {
-		// 分类过滤（如果指定了监控分类列表）
+		// Category filtering if categories specified
 		if len(allowedCategories) > 0 {
 			if _, ok := allowedCategories[t.Category]; !ok {
 				continue
@@ -131,7 +137,7 @@ func (c *Client) GetCompletedTorrents(ctx context.Context, categories []string) 
 	return result, nil
 }
 
-// convertTorrent 将 qB 种子实体映射为通用的 Torrent 模型
+// convertTorrent maps qBittorrent entity to the domain Torrent model.
 func (c *Client) convertTorrent(t qb.Torrent) downloader.Torrent {
 	tags := parseTags(t.Tags)
 	savePath := c.pathMapper.ToLocal(t.SavePath)
@@ -156,7 +162,7 @@ func (c *Client) convertTorrent(t qb.Torrent) downloader.Torrent {
 	}
 }
 
-// GetTorrentFiles 获取指定种子包含的文件信息
+// GetTorrentFiles retrieves file information for a specific torrent.
 func (c *Client) GetTorrentFiles(ctx context.Context, hash string) ([]downloader.TorrentFile, error) {
 	files, err := c.client.GetFilesInformationCtx(ctx, hash)
 	if err != nil {
@@ -180,7 +186,7 @@ func (c *Client) GetTorrentFiles(ctx context.Context, hash string) ([]downloader
 	return result, nil
 }
 
-// AddTags 为指定种子添加标签
+// AddTags applies tags to the specified torrent hashes.
 func (c *Client) AddTags(ctx context.Context, hashes []string, tags []string) error {
 	if len(hashes) == 0 || len(tags) == 0 {
 		return nil
@@ -194,7 +200,7 @@ func (c *Client) AddTags(ctx context.Context, hashes []string, tags []string) er
 	return nil
 }
 
-// RemoveTags 为指定种子移除标签
+// RemoveTags removes tags from the specified torrent hashes.
 func (c *Client) RemoveTags(ctx context.Context, hashes []string, tags []string) error {
 	if len(hashes) == 0 || len(tags) == 0 {
 		return nil
@@ -208,7 +214,7 @@ func (c *Client) RemoveTags(ctx context.Context, hashes []string, tags []string)
 	return nil
 }
 
-// parseTags 解析 qB 返回的逗号分隔标签字符串
+// parseTags parses a comma-separated tag string into a string slice.
 func parseTags(tagStr string) []string {
 	if strings.TrimSpace(tagStr) == "" {
 		return []string{}

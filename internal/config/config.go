@@ -9,12 +9,13 @@ import (
 
 // Config represents the system-wide global configuration.
 type Config struct {
-	Server      ServerConfig      `yaml:"server" json:"server"`
-	Database    DatabaseConfig    `yaml:"database" json:"database"`
-	QBittorrent QBittorrentConfig `yaml:"qbittorrent" json:"qbittorrent"`
-	TMDB        TMDBConfig        `yaml:"tmdb" json:"tmdb"`
-	Library     LibraryConfig     `yaml:"library" json:"library"`
-	Plugins     PluginConfig      `yaml:"plugins" json:"plugins"`
+	Server      ServerConfig               `yaml:"server" json:"server"`
+	Database    DatabaseConfig             `yaml:"database" json:"database"`
+	QBittorrent QBittorrentConfig          `yaml:"qbittorrent" json:"qbittorrent"`
+	Downloaders []DownloaderInstanceConfig `yaml:"downloaders" json:"downloaders"`
+	TMDB        TMDBConfig                 `yaml:"tmdb" json:"tmdb"`
+	Library     LibraryConfig              `yaml:"library" json:"library"`
+	Plugins     PluginConfig               `yaml:"plugins" json:"plugins"`
 }
 
 // DatabaseConfig holds database connection parameters.
@@ -62,6 +63,7 @@ type PathMapping struct {
 
 // QBittorrentConfig holds connection and management settings for qBittorrent.
 type QBittorrentConfig struct {
+	ID           string        `yaml:"id" json:"id"`                       // Optional component ID (defaults to "downloader")
 	Enabled      bool          `yaml:"enabled" json:"enabled"`
 	URL          string        `yaml:"url" json:"url"`                     // WebUI URL, e.g. http://127.0.0.1:8080
 	Username     string        `yaml:"username" json:"username"`           // Username
@@ -72,6 +74,81 @@ type QBittorrentConfig struct {
 	FailTag      string        `yaml:"fail_tag" json:"fail_tag"`           // Tag applied upon failed organization
 	PollInterval int           `yaml:"poll_interval" json:"poll_interval"` // Background poll interval in seconds (default: 30)
 	PathMappings []PathMapping `yaml:"path_mappings" json:"path_mappings"` // Path mapping rules list
+}
+
+// DownloaderInstanceConfig represents configuration for an individual downloader instance component.
+type DownloaderInstanceConfig struct {
+	ID           string        `yaml:"id" json:"id"`                       // Unique component ID, e.g. "downloader", "downloader:movie", "downloader:tv"
+	Type         string        `yaml:"type" json:"type"`                   // Downloader type, e.g. "qbittorrent"
+	Name         string        `yaml:"name" json:"name"`                   // Friendly display name
+	Enabled      bool          `yaml:"enabled" json:"enabled"`             // Whether this downloader is enabled
+	URL          string        `yaml:"url" json:"url"`                     // WebUI URL, e.g. http://127.0.0.1:8080
+	Username     string        `yaml:"username" json:"username"`           // Username
+	Password     string        `yaml:"password" json:"password"`           // Password
+	Categories   []string      `yaml:"categories" json:"categories"`       // Watched categories list
+	AutoTag      bool          `yaml:"auto_tag" json:"auto_tag"`           // Whether to tag processed torrents
+	SuccessTag   string        `yaml:"success_tag" json:"success_tag"`     // Tag applied upon successful organization
+	FailTag      string        `yaml:"fail_tag" json:"fail_tag"`           // Tag applied upon failed organization
+	PollInterval int           `yaml:"poll_interval" json:"poll_interval"` // Background poll interval in seconds (default: 30)
+	PathMappings []PathMapping `yaml:"path_mappings" json:"path_mappings"` // Path mapping rules list
+}
+
+// ToInstanceConfig converts QBittorrentConfig to DownloaderInstanceConfig.
+func (q QBittorrentConfig) ToInstanceConfig(fallbackID string) DownloaderInstanceConfig {
+	id := q.ID
+	if id == "" {
+		id = fallbackID
+	}
+	if id == "" {
+		id = "downloader"
+	}
+	return DownloaderInstanceConfig{
+		ID:           id,
+		Type:         "qbittorrent",
+		Name:         "qBittorrent",
+		Enabled:      q.Enabled,
+		URL:          q.URL,
+		Username:     q.Username,
+		Password:     q.Password,
+		Categories:   q.Categories,
+		AutoTag:      q.AutoTag,
+		SuccessTag:   q.SuccessTag,
+		FailTag:      q.FailTag,
+		PollInterval: q.PollInterval,
+		PathMappings: q.PathMappings,
+	}
+}
+
+// ToQBittorrentConfig converts DownloaderInstanceConfig to QBittorrentConfig.
+func (d DownloaderInstanceConfig) ToQBittorrentConfig() QBittorrentConfig {
+	return QBittorrentConfig{
+		ID:           d.ID,
+		Enabled:      d.Enabled,
+		URL:          d.URL,
+		Username:     d.Username,
+		Password:     d.Password,
+		Categories:   d.Categories,
+		AutoTag:      d.AutoTag,
+		SuccessTag:   d.SuccessTag,
+		FailTag:      d.FailTag,
+		PollInterval: d.PollInterval,
+		PathMappings: d.PathMappings,
+	}
+}
+
+// GetDownloaderConfigs returns all configured downloader instances.
+// If the Downloaders slice is empty but the top-level QBittorrent is configured,
+// it wraps QBittorrent into a default DownloaderInstanceConfig for backwards compatibility.
+func (c *Config) GetDownloaderConfigs() []DownloaderInstanceConfig {
+	if len(c.Downloaders) > 0 {
+		return c.Downloaders
+	}
+
+	if c.QBittorrent.Enabled || c.QBittorrent.URL != "" {
+		return []DownloaderInstanceConfig{c.QBittorrent.ToInstanceConfig("downloader")}
+	}
+
+	return nil
 }
 
 // DefaultConfig returns default configuration values.
