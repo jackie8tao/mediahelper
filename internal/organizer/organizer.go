@@ -26,12 +26,20 @@ var (
 
 // Organizer 文件整理引擎
 type Organizer struct {
-	cfg        config.Config
+	cfg        config.OrganizerInstanceConfig
 	scraperSvc scraper.Scraper
 }
 
-// NewOrganizer 创建整理引擎实例
+// NewOrganizer 创建整理引擎实例 (向下兼容全局配置)
 func NewOrganizer(cfg config.Config, scraperSvc scraper.Scraper) *Organizer {
+	instCfg := cfg.Library.ToInstanceConfig("organizer")
+	instCfg.GenerateNFO = cfg.TMDB.GenerateNFO
+	instCfg.DownloadImages = cfg.TMDB.DownloadImages
+	return NewOrganizerFromInstance(instCfg, scraperSvc)
+}
+
+// NewOrganizerFromInstance 创建特定实例配置的整理引擎
+func NewOrganizerFromInstance(cfg config.OrganizerInstanceConfig, scraperSvc scraper.Scraper) *Organizer {
 	return &Organizer{
 		cfg:        cfg,
 		scraperSvc: scraperSvc,
@@ -79,7 +87,7 @@ func (o *Organizer) Organize(ctx context.Context, task OrganizeTask) (*OrganizeR
 		titleYear = fmt.Sprintf("%s (%d)", cleanTitle, meta.Year)
 	}
 
-	linkMode := LinkMode(o.cfg.Library.LinkMode)
+	linkMode := LinkMode(o.cfg.LinkMode)
 	if linkMode == "" {
 		linkMode = LinkModeHardlink
 	}
@@ -130,7 +138,7 @@ func (o *Organizer) Organize(ctx context.Context, task OrganizeTask) (*OrganizeR
 		o.transferSubtitles(mainVideo, targetFilePath, linkMode, result)
 
 		// 写入 movie.nfo
-		if o.cfg.TMDB.GenerateNFO {
+		if o.cfg.GenerateNFO {
 			nfoPath := filepath.Join(movieDir, "movie.nfo")
 			if nfoData, err := nfo.GenerateMovieNFO(meta); err == nil {
 				_ = os.WriteFile(nfoPath, nfoData, 0644)
@@ -187,7 +195,7 @@ func (o *Organizer) Organize(ctx context.Context, task OrganizeTask) (*OrganizeR
 			o.transferSubtitles(vFile, targetFilePath, linkMode, result)
 
 			// 生成单集 NFO
-			if o.cfg.TMDB.GenerateNFO && episode > 0 {
+			if o.cfg.GenerateNFO && episode > 0 {
 				epNFOPath := strings.TrimSuffix(targetFilePath, ext) + ".nfo"
 				epMeta := *meta
 				epMeta.Season = season
@@ -199,7 +207,7 @@ func (o *Organizer) Organize(ctx context.Context, task OrganizeTask) (*OrganizeR
 		}
 
 		// 写入剧集主 tvshow.nfo
-		if o.cfg.TMDB.GenerateNFO {
+		if o.cfg.GenerateNFO {
 			tvNFOPath := filepath.Join(showDir, "tvshow.nfo")
 			if nfoData, err := nfo.GenerateTVShowNFO(meta); err == nil {
 				_ = os.WriteFile(tvNFOPath, nfoData, 0644)
@@ -219,14 +227,14 @@ func (o *Organizer) Organize(ctx context.Context, task OrganizeTask) (*OrganizeR
 func (o *Organizer) getTargetBaseDir(mType parser.MediaType) string {
 	switch mType {
 	case parser.MediaTypeMovie:
-		return o.cfg.Library.MovieDir
+		return o.cfg.MovieDir
 	case parser.MediaTypeAnime:
-		if o.cfg.Library.AnimeDir != "" {
-			return o.cfg.Library.AnimeDir
+		if o.cfg.AnimeDir != "" {
+			return o.cfg.AnimeDir
 		}
-		return o.cfg.Library.TVDir
+		return o.cfg.TVDir
 	default:
-		return o.cfg.Library.TVDir
+		return o.cfg.TVDir
 	}
 }
 
@@ -242,7 +250,7 @@ func (o *Organizer) isVideoFile(path string) bool {
 		return false
 	}
 
-	minSize := o.cfg.Library.MinFileSize
+	minSize := o.cfg.MinFileSize
 	if minSize <= 0 {
 		minSize = 10 * 1024 * 1024 // 默认至少 10MB
 	}
@@ -322,7 +330,7 @@ func (o *Organizer) transferSubtitles(srcVideo, dstVideo string, mode LinkMode, 
 
 // downloadImages 下载海报与背景图
 func (o *Organizer) downloadImages(ctx context.Context, meta *scraper.MediaMetadata, targetDir string, result *OrganizeResult) {
-	if !o.cfg.TMDB.DownloadImages || o.scraperSvc == nil {
+	if !o.cfg.DownloadImages || o.scraperSvc == nil {
 		return
 	}
 

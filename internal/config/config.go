@@ -14,6 +14,9 @@ type Config struct {
 	QBittorrent  QBittorrentConfig          `yaml:"qbittorrent" json:"qbittorrent"`
 	Downloaders  []DownloaderInstanceConfig `yaml:"downloaders" json:"downloaders"`
 	PathMappings []PathMapping              `yaml:"path_mappings" json:"path_mappings"`
+	Parsers      []ParserInstanceConfig     `yaml:"parsers" json:"parsers"`
+	Scrapers     []ScraperInstanceConfig    `yaml:"scrapers" json:"scrapers"`
+	Organizers   []OrganizerInstanceConfig  `yaml:"organizers" json:"organizers"`
 	TMDB         TMDBConfig                 `yaml:"tmdb" json:"tmdb"`
 	Library      LibraryConfig              `yaml:"library" json:"library"`
 	Plugins      PluginConfig               `yaml:"plugins" json:"plugins"`
@@ -137,6 +140,110 @@ func (d DownloaderInstanceConfig) ToQBittorrentConfig() QBittorrentConfig {
 	}
 }
 
+// ParserInstanceConfig represents configuration for an individual parser component.
+type ParserInstanceConfig struct {
+	ID                  string   `yaml:"id" json:"id"`                                     // Unique component ID, e.g. "parser", "parser:anime"
+	Name                string   `yaml:"name" json:"name"`                                 // Friendly display name
+	Enabled             bool     `yaml:"enabled" json:"enabled"`                           // Whether this parser instance is enabled
+	DefaultMediaType    string   `yaml:"default_media_type" json:"default_media_type"`     // Optional default fallback media type (movie/tv/anime)
+	CustomReleaseGroups []string `yaml:"custom_release_groups" json:"custom_release_groups"` // Optional additional release group identifiers
+}
+
+// ScraperInstanceConfig represents configuration for an individual scraper component.
+type ScraperInstanceConfig struct {
+	ID             string `yaml:"id" json:"id"`                         // Unique component ID, e.g. "scraper", "scraper:tmdb-en"
+	Type           string `yaml:"type" json:"type"`                     // Scraper provider type, e.g. "tmdb"
+	Name           string `yaml:"name" json:"name"`                     // Friendly display name
+	Enabled        bool   `yaml:"enabled" json:"enabled"`               // Whether this scraper instance is enabled
+	APIKey         string `yaml:"api_key" json:"api_key"`               // API authentication key
+	BaseURL        string `yaml:"base_url" json:"base_url"`             // API base URL
+	ImageBaseURL   string `yaml:"image_base_url" json:"image_base_url"` // Artwork CDN base URL
+	Language       string `yaml:"language" json:"language"`             // Preferred metadata language
+	Proxy          string `yaml:"proxy" json:"proxy"`                   // Optional proxy URL
+	GenerateNFO    bool   `yaml:"generate_nfo" json:"generate_nfo"`     // Whether to generate NFO metadata files
+	DownloadImages bool   `yaml:"download_images" json:"download_images"` // Whether to download poster and backdrop artwork
+}
+
+// ToInstanceConfig converts TMDBConfig to ScraperInstanceConfig.
+func (t TMDBConfig) ToInstanceConfig(fallbackID string) ScraperInstanceConfig {
+	id := fallbackID
+	if id == "" {
+		id = "scraper"
+	}
+	return ScraperInstanceConfig{
+		ID:             id,
+		Type:           "tmdb",
+		Name:           "TMDB Scraper",
+		Enabled:        t.APIKey != "",
+		APIKey:         t.APIKey,
+		BaseURL:        t.BaseURL,
+		ImageBaseURL:   t.ImageBaseURL,
+		Language:       t.Language,
+		Proxy:          t.Proxy,
+		GenerateNFO:    t.GenerateNFO,
+		DownloadImages: t.DownloadImages,
+	}
+}
+
+// ToTMDBConfig converts ScraperInstanceConfig to TMDBConfig.
+func (s ScraperInstanceConfig) ToTMDBConfig() TMDBConfig {
+	return TMDBConfig{
+		APIKey:         s.APIKey,
+		BaseURL:        s.BaseURL,
+		ImageBaseURL:   s.ImageBaseURL,
+		Language:       s.Language,
+		Proxy:          s.Proxy,
+		GenerateNFO:    s.GenerateNFO,
+		DownloadImages: s.DownloadImages,
+	}
+}
+
+// OrganizerInstanceConfig represents configuration for an individual organizer component.
+type OrganizerInstanceConfig struct {
+	ID             string `yaml:"id" json:"id"`                         // Unique component ID, e.g. "organizer", "organizer:movie"
+	Name           string `yaml:"name" json:"name"`                     // Friendly display name
+	Enabled        bool   `yaml:"enabled" json:"enabled"`               // Whether this organizer instance is enabled
+	MovieDir       string `yaml:"movie_dir" json:"movie_dir"`           // Root directory for movie library
+	TVDir          string `yaml:"tv_dir" json:"tv_dir"`                 // Root directory for TV show library
+	AnimeDir       string `yaml:"anime_dir" json:"anime_dir"`           // Root directory for anime library
+	LinkMode       string `yaml:"link_mode" json:"link_mode"`           // hardlink, copy, move, symlink
+	MinFileSize    int64  `yaml:"min_file_size" json:"min_file_size"`   // Minimum file size in bytes for valid video files
+	GenerateNFO    bool   `yaml:"generate_nfo" json:"generate_nfo"`     // Whether to generate NFO files
+	DownloadImages bool   `yaml:"download_images" json:"download_images"` // Whether to download images
+	ScraperID      string `yaml:"scraper_id" json:"scraper_id"`         // Optional target scraper component ID
+}
+
+// ToInstanceConfig converts LibraryConfig to OrganizerInstanceConfig.
+func (l LibraryConfig) ToInstanceConfig(fallbackID string) OrganizerInstanceConfig {
+	id := fallbackID
+	if id == "" {
+		id = "organizer"
+	}
+	return OrganizerInstanceConfig{
+		ID:             id,
+		Name:           "Media Organizer",
+		Enabled:        true,
+		MovieDir:       l.MovieDir,
+		TVDir:          l.TVDir,
+		AnimeDir:       l.AnimeDir,
+		LinkMode:       l.LinkMode,
+		MinFileSize:    l.MinFileSize,
+		GenerateNFO:    true,
+		DownloadImages: true,
+	}
+}
+
+// ToLibraryConfig converts OrganizerInstanceConfig to LibraryConfig.
+func (o OrganizerInstanceConfig) ToLibraryConfig() LibraryConfig {
+	return LibraryConfig{
+		MovieDir:    o.MovieDir,
+		TVDir:       o.TVDir,
+		AnimeDir:    o.AnimeDir,
+		LinkMode:    o.LinkMode,
+		MinFileSize: o.MinFileSize,
+	}
+}
+
 // GetDownloaderConfigs returns all configured downloader instances.
 // If the Downloaders slice is empty but the top-level QBittorrent is configured,
 // it wraps QBittorrent into a default DownloaderInstanceConfig for backwards compatibility.
@@ -159,6 +266,45 @@ func (c *Config) GetPathMappings() []PathMapping {
 	}
 	if len(c.QBittorrent.PathMappings) > 0 {
 		return c.QBittorrent.PathMappings
+	}
+	return nil
+}
+
+// GetParserConfigs returns all configured parser instances, falling back to a default instance.
+func (c *Config) GetParserConfigs() []ParserInstanceConfig {
+	if len(c.Parsers) > 0 {
+		return c.Parsers
+	}
+	return []ParserInstanceConfig{
+		{
+			ID:      "parser",
+			Name:    "Default Parser",
+			Enabled: true,
+		},
+	}
+}
+
+// GetScraperConfigs returns all configured scraper instances, falling back to legacy TMDBConfig.
+func (c *Config) GetScraperConfigs() []ScraperInstanceConfig {
+	if len(c.Scrapers) > 0 {
+		return c.Scrapers
+	}
+	if c.TMDB.APIKey != "" || c.TMDB.BaseURL != "" {
+		return []ScraperInstanceConfig{c.TMDB.ToInstanceConfig("scraper")}
+	}
+	return nil
+}
+
+// GetOrganizerConfigs returns all configured organizer instances, falling back to legacy LibraryConfig.
+func (c *Config) GetOrganizerConfigs() []OrganizerInstanceConfig {
+	if len(c.Organizers) > 0 {
+		return c.Organizers
+	}
+	if c.Library.MovieDir != "" || c.Library.TVDir != "" {
+		inst := c.Library.ToInstanceConfig("organizer")
+		inst.GenerateNFO = c.TMDB.GenerateNFO
+		inst.DownloadImages = c.TMDB.DownloadImages
+		return []OrganizerInstanceConfig{inst}
 	}
 	return nil
 }

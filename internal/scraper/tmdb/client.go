@@ -22,6 +22,16 @@ type Client struct {
 	httpClient *http.Client
 }
 
+func init() {
+	scraper.RegisterFactory("tmdb", func(cfg config.ScraperInstanceConfig) (scraper.Scraper, error) {
+		tmdbCli, err := NewClient(cfg.ToTMDBConfig())
+		if err != nil {
+			return nil, err
+		}
+		return scraper.NewService(cfg.ToTMDBConfig(), tmdbCli), nil
+	})
+}
+
 // NewClient 创建 TMDB 客户端
 func NewClient(cfg config.TMDBConfig) (*Client, error) {
 	transport := &http.Transport{

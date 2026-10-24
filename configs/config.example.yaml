@@ -75,7 +75,18 @@ path_mappings:
 #     poll_interval: 30
 #     path_mappings: []
 
-# TMDB 刮削配置
+# 多解析器配置 (可选，默认内置单实例 parser)
+# parsers:
+#   - id: "parser:movie"
+#     name: "电影解析器"
+#     enabled: true
+#     default_media_type: "movie"
+#   - id: "parser:anime"
+#     name: "动漫解析器"
+#     enabled: true
+#     default_media_type: "anime"
+
+# TMDB 刮削配置 (单实例兼容模式)
 tmdb:
   api_key: "your_tmdb_api_key_here"
   # API 根地址 (国内可配置反代加速域名，如 https://api.tmdb.org/3)
@@ -91,7 +102,26 @@ tmdb:
   # 是否下载海报封面 (poster.jpg, fanart.jpg)
   download_images: true
 
-# 媒体库整理与归档配置
+# 多刮削器配置 (可选，若配置 scrapers 列表优先于 tmdb 单配置)
+# scrapers:
+#   - id: "scraper:tmdb-zh"
+#     type: "tmdb"
+#     name: "TMDB 中文刮削"
+#     enabled: true
+#     api_key: "your_tmdb_api_key"
+#     language: "zh-CN"
+#     generate_nfo: true
+#     download_images: true
+#   - id: "scraper:tmdb-en"
+#     type: "tmdb"
+#     name: "TMDB 英文刮削"
+#     enabled: true
+#     api_key: "your_tmdb_api_key"
+#     language: "en-US"
+#     generate_nfo: true
+#     download_images: true
+
+# 媒体库整理与归档配置 (单实例兼容模式)
 library:
   # 电影输出媒体库根目录
   movie_dir: "D:/Media/Movies"
@@ -103,6 +133,22 @@ library:
   link_mode: "hardlink"
   # 最小视频文件过滤阈值 (字节，默认 50MB，过滤掉样品样片与广告)
   min_file_size: 52428800
+
+# 多整理器配置 (可选，若配置 organizers 列表优先于 library 单配置)
+# organizers:
+#   - id: "organizer:movie"
+#     name: "电影整理归档"
+#     enabled: true
+#     movie_dir: "D:/Media/Movies"
+#     link_mode: "hardlink"
+#     min_file_size: 52428800
+#   - id: "organizer:tv"
+#     name: "剧集整理归档"
+#     enabled: true
+#     tv_dir: "D:/Media/TV"
+#     anime_dir: "D:/Media/Anime"
+#     link_mode: "hardlink"
+#     min_file_size: 52428800
 
 # 插件系统配置
 plugins:

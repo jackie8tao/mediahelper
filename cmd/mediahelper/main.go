@@ -30,6 +30,7 @@ import (
 	_ "github.com/jackie8tao/mediahelper/internal/downloader/qbittorrent"
 	_ "github.com/jackie8tao/mediahelper/internal/downloader/transmission"
 	"github.com/jackie8tao/mediahelper/internal/organizer"
+	"github.com/jackie8tao/mediahelper/internal/parser"
 	"github.com/jackie8tao/mediahelper/internal/pathmapper"
 	"github.com/jackie8tao/mediahelper/internal/pipeline"
 	"github.com/jackie8tao/mediahelper/internal/plugin"
@@ -78,7 +79,7 @@ func main() {
 		}
 	}
 
-	// 4. 初始化流水线组件注册中心并载入组件
+	// 4. 初始化流水线组件注册中心并动态载入组件
 	compRegistry := pipeline.NewComponentRegistry()
 	if _, err := pathmapper.RegisterComponent(cfg, compRegistry); err != nil {
 		slog.Error("Failed to register path mapper component", "error", err)
@@ -87,6 +88,15 @@ func main() {
 	dlComps, err := downloader.RegisterComponents(cfg, compRegistry)
 	if err != nil {
 		slog.Error("Failed to register downloader components", "error", err)
+	}
+
+	if _, err := parser.RegisterComponents(cfg, compRegistry); err != nil {
+		slog.Error("Failed to register parser components", "error", err)
+	}
+
+	scraperComps, err := scraper.RegisterComponents(cfg, compRegistry)
+	if err != nil {
+		slog.Error("Failed to register scraper components", "error", err)
 	}
 
 	var dl downloader.Downloader
@@ -102,9 +112,10 @@ func main() {
 		}()
 	}
 
-	// 3. 初始化 TMDB 刮削器
 	var scraperSvc scraper.Scraper
-	if cfg.TMDB.APIKey != "" {
+	if len(scraperComps) > 0 {
+		scraperSvc = scraperComps[0].Scraper()
+	} else if cfg.TMDB.APIKey != "" {
 		tmdbCli, err := tmdb.NewClient(cfg.TMDB)
 		if err != nil {
 			slog.Error("Failed to initialize TMDB client", "error", err)
@@ -116,8 +127,17 @@ func main() {
 		slog.Warn("TMDB api_key is empty, metadata scraping is disabled")
 	}
 
-	// 4. 初始化文件整理引擎
-	org := organizer.NewOrganizer(*cfg, scraperSvc)
+	orgComps, err := organizer.RegisterComponents(cfg, compRegistry, scraperSvc)
+	if err != nil {
+		slog.Error("Failed to register organizer components", "error", err)
+	}
+
+	var org *organizer.Organizer
+	if len(orgComps) > 0 {
+		org = orgComps[0].Organizer()
+	} else {
+		org = organizer.NewOrganizer(*cfg, scraperSvc)
+	}
 
 	// 5. 初始化插件管理器并载入插件
 	pluginMgr := plugin.NewManager()
