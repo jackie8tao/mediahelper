@@ -7,7 +7,7 @@ server:
 database:
   dsn: "data/mediahelper.db"
 
-# qBittorrent 客户端配置
+# qBittorrent 客户端配置 (单实例兼容模式)
 qbittorrent:
   enabled: true
   url: "http://127.0.0.1:8080"
@@ -28,6 +28,51 @@ qbittorrent:
   path_mappings:
     - remote: "/downloads"
       local: "D:/Downloads"
+
+# 多下载器配置 (支持 qBittorrent、Transmission、Aria2 多实例共存)
+# 若配置了 downloaders 列表，将优先以此处配置为准；若未配置则回退到上方 qbittorrent 配置。
+# downloaders:
+#   - id: "qbt-main"
+#     type: "qbittorrent"
+#     name: "主 qBittorrent"
+#     enabled: true
+#     url: "http://127.0.0.1:8080"
+#     username: "admin"
+#     password: "password"
+#     categories: ["movie", "tv"]
+#     auto_tag: true
+#     success_tag: "MediaHelper:Done"
+#     poll_interval: 30
+#     path_mappings:
+#       - remote: "/downloads"
+#         local: "D:/Downloads"
+#
+#   - id: "tr-main"
+#     type: "transmission"
+#     name: "Transmission 影视"
+#     enabled: true
+#     url: "http://127.0.0.1:9091"
+#     username: "admin"
+#     password: "password"
+#     categories: ["movie", "anime"]
+#     auto_tag: true
+#     success_tag: "MediaHelper:Done"
+#     poll_interval: 30
+#     path_mappings:
+#       - remote: "/downloads"
+#         local: "D:/Downloads"
+#
+#   - id: "aria2-main"
+#     type: "aria2"
+#     name: "Aria2 下载器"
+#     enabled: true
+#     url: "http://127.0.0.1:6800/jsonrpc"
+#     password: "secret_rpc_token"
+#     categories: ["movie"]
+#     auto_tag: true
+#     success_tag: "MediaHelper:Done"
+#     poll_interval: 30
+#     path_mappings: []
 
 # TMDB 刮削配置
 tmdb:
