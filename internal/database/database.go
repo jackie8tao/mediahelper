@@ -59,7 +59,14 @@ func InitDB(dsn string) (*gorm.DB, error) {
 	sqlDB.SetMaxIdleConns(1)
 
 	// 自动迁移表结构
-	if err := db.AutoMigrate(&TorrentRecord{}, &TaskHistory{}, &MediaMapping{}); err != nil {
+	if err := db.AutoMigrate(
+		&TorrentRecord{},
+		&TaskHistory{},
+		&MediaMapping{},
+		&Pipeline{},
+		&PipelineExecution{},
+		&StepExecution{},
+	); err != nil {
 		return nil, fmt.Errorf("database auto migrate error: %w", err)
 	}
 
