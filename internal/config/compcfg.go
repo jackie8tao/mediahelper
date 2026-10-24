@@ -254,7 +254,6 @@ func LoadComponentConfigFromDB(db *gorm.DB) (*ComponentConfig, error) {
 			return nil, fmt.Errorf("unmarshal downloaders error: %w", err)
 		}
 	}
-
 	if val, ok := settingsMap[SectionPathMappings]; ok && strings.TrimSpace(val) != "" {
 		if err := json.Unmarshal([]byte(val), &cfg.PathMappings); err != nil {
 			return nil, fmt.Errorf("unmarshal path_mappings error: %w", err)
@@ -264,25 +263,21 @@ func LoadComponentConfigFromDB(db *gorm.DB) (*ComponentConfig, error) {
 			return nil, fmt.Errorf("unmarshal pathmappers error: %w", err)
 		}
 	}
-
 	if val, ok := settingsMap[SectionParsers]; ok && strings.TrimSpace(val) != "" {
 		if err := json.Unmarshal([]byte(val), &cfg.Parsers); err != nil {
 			return nil, fmt.Errorf("unmarshal parsers error: %w", err)
 		}
 	}
-
 	if val, ok := settingsMap[SectionScrapers]; ok && strings.TrimSpace(val) != "" {
 		if err := json.Unmarshal([]byte(val), &cfg.Scrapers); err != nil {
 			return nil, fmt.Errorf("unmarshal scrapers error: %w", err)
 		}
 	}
-
 	if val, ok := settingsMap[SectionOrganizers]; ok && strings.TrimSpace(val) != "" {
 		if err := json.Unmarshal([]byte(val), &cfg.Organizers); err != nil {
 			return nil, fmt.Errorf("unmarshal organizers error: %w", err)
 		}
 	}
-
 	if val, ok := settingsMap[SectionPlugins]; ok && strings.TrimSpace(val) != "" {
 		if err := json.Unmarshal([]byte(val), &cfg.Plugins); err != nil {
 			return nil, fmt.Errorf("unmarshal plugins error: %w", err)
@@ -378,59 +373,4 @@ func LoadComponentSection(db *gorm.DB, section string, target any) error {
 	}
 
 	return nil
-}
-
-// LoadOrInitComponentConfig loads component configuration from database, initializing it with fallback if not found.
-func LoadOrInitComponentConfig(db *gorm.DB, initial *ComponentConfig) (*ComponentConfig, error) {
-	loaded, err := LoadComponentConfigFromDB(db)
-	if err != nil {
-		if errors.Is(err, ErrConfigNotFound) {
-			if initial == nil {
-				initial = DefaultComponentConfig()
-			}
-			if err := SaveComponentConfigToDB(db, initial); err != nil {
-				return nil, err
-			}
-			return initial, nil
-		}
-		return nil, err
-	}
-	return loaded, nil
-}
-
-// LoadFromDB loads combined configuration from database records (SystemConfig uses defaults).
-func LoadFromDB(db *gorm.DB) (*Config, error) {
-	compCfg, err := LoadComponentConfigFromDB(db)
-	if err != nil {
-		return nil, err
-	}
-
-	cfg := DefaultConfig()
-	cfg.ComponentConfig = *compCfg
-	return cfg, nil
-}
-
-// SaveToDB persists component configuration from Config into the database.
-func SaveToDB(db *gorm.DB, cfg *Config) error {
-	if cfg == nil {
-		return errors.New("config is nil")
-	}
-	return SaveComponentConfigToDB(db, &cfg.ComponentConfig)
-}
-
-// LoadOrInit loads configuration from database, or seeds initial configuration if not found.
-// SystemConfig is retained from initial, while ComponentConfig is loaded or initialized into the database.
-func LoadOrInit(db *gorm.DB, initial *Config) (*Config, error) {
-	if initial == nil {
-		initial = DefaultConfig()
-	}
-
-	compCfg, err := LoadOrInitComponentConfig(db, &initial.ComponentConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	res := *initial
-	res.ComponentConfig = *compCfg
-	return &res, nil
 }
