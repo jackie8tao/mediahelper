@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -182,7 +181,7 @@ func TestTransmissionClient(t *testing.T) {
 	assert.Equal(t, "tr_hash_1", all[0].Hash)
 	assert.True(t, all[0].IsCompleted)
 	assert.Equal(t, "uploading", all[0].State)
-	assert.Equal(t, filepath.FromSlash("/local/downloads/movies"), all[0].SavePath)
+	assert.Equal(t, "/downloads/movies", all[0].SavePath)
 
 	// 4. Filter by completed
 	completed, err := dl.GetCompletedTorrents(ctx, []string{"movie"})

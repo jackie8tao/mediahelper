@@ -8,7 +8,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -41,7 +40,6 @@ type Client struct {
 	cfg        config.DownloaderInstanceConfig
 	endpoint   string
 	httpClient *http.Client
-	pathMapper *downloader.PathMapper
 
 	sessionMu sync.RWMutex
 	sessionID string
@@ -67,7 +65,6 @@ func NewClient(cfg config.DownloaderInstanceConfig) (*Client, error) {
 		cfg:        cfg,
 		endpoint:   endpoint,
 		httpClient: &http.Client{Timeout: timeout},
-		pathMapper: downloader.NewPathMapper(cfg.PathMappings),
 	}, nil
 }
 
@@ -213,8 +210,8 @@ type trFile struct {
 
 func (c *Client) convertTorrent(t trTorrent) downloader.Torrent {
 	hash := strings.ToLower(t.HashString)
-	savePath := c.pathMapper.ToLocal(t.DownloadDir)
-	contentPath := filepath.Join(savePath, t.Name)
+	savePath := t.DownloadDir
+	contentPath := strings.TrimRight(t.DownloadDir, "/") + "/" + t.Name
 
 	isCompleted := t.PercentDone >= 1.0 || t.IsFinished || t.Status == statusSeed || t.Status == statusSeedWait
 

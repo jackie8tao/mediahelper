@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -204,9 +203,9 @@ func TestClient_AllOperations(t *testing.T) {
 			t.Errorf("expected hash_movie_1, got %s", first.Hash)
 		}
 
-		expectedPath := filepath.FromSlash("D:/LocalDownloads/movies/Oppenheimer.2023.2160p.UHD.BluRay.x265")
+		expectedPath := "/downloads/movies/Oppenheimer.2023.2160p.UHD.BluRay.x265"
 		if first.ContentPath != expectedPath {
-			t.Errorf("path mapping mismatch: expected %s, got %s", expectedPath, first.ContentPath)
+			t.Errorf("path mismatch: expected %s, got %s", expectedPath, first.ContentPath)
 		}
 
 		if len(first.Tags) != 2 || first.Tags[0] != "4K" || first.Tags[1] != "MediaHelper:Done" {

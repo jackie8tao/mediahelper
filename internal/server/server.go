@@ -11,6 +11,7 @@ import (
 	_ "github.com/jackie8tao/mediahelper/docs"
 	"github.com/jackie8tao/mediahelper/internal/config"
 	"github.com/jackie8tao/mediahelper/internal/downloader"
+	"github.com/jackie8tao/mediahelper/internal/pathmapper"
 	"github.com/jackie8tao/mediahelper/internal/service"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -20,7 +21,7 @@ import (
 type Server struct {
 	cfg        *config.Config
 	pipeline   *service.Pipeline
-	pathMapper *downloader.PathMapper
+	pathMapper *pathmapper.PathMapper
 	router     *gin.Engine
 	httpServer *http.Server
 }
@@ -34,7 +35,7 @@ func New(cfg *config.Config, pipeline *service.Pipeline) *Server {
 	s := &Server{
 		cfg:        cfg,
 		pipeline:   pipeline,
-		pathMapper: downloader.NewPathMapper(cfg.QBittorrent.PathMappings),
+		pathMapper: pathmapper.NewPathMapper(cfg.GetPathMappings()),
 		router:     router,
 	}
 

@@ -30,7 +30,6 @@ type Client struct {
 	endpoint   string
 	token      string
 	httpClient *http.Client
-	pathMapper *downloader.PathMapper
 
 	// In-memory tag store to support MediaHelper tag lifecycle on Aria2 tasks
 	tagsMu sync.RWMutex
@@ -72,7 +71,6 @@ func NewClient(cfg config.DownloaderInstanceConfig) (*Client, error) {
 		endpoint:   endpoint,
 		token:      token,
 		httpClient: &http.Client{Timeout: timeout},
-		pathMapper: downloader.NewPathMapper(cfg.PathMappings),
 		tags:       make(map[string][]string),
 	}, nil
 }
@@ -283,12 +281,12 @@ func (c *Client) convertTask(t aria2Task) downloader.Torrent {
 		state = t.Status
 	}
 
-	savePath := c.pathMapper.ToLocal(t.Dir)
+	savePath := t.Dir
 	contentPath := savePath
 	if t.Bittorrent != nil && t.Bittorrent.Info.Name != "" {
-		contentPath = filepath.Join(savePath, t.Bittorrent.Info.Name)
+		contentPath = strings.TrimRight(t.Dir, "/") + "/" + t.Bittorrent.Info.Name
 	} else if len(t.Files) > 0 && t.Files[0].Path != "" {
-		contentPath = c.pathMapper.ToLocal(t.Files[0].Path)
+		contentPath = t.Files[0].Path
 	}
 
 	tags := c.getTaskTags(hash, t.Gid)

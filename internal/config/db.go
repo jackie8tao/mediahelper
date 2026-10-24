@@ -14,13 +14,14 @@ import (
 
 // Section key constants for structured configuration modules
 const (
-	SectionServer      = "server"
-	SectionDatabase    = "database"
-	SectionQBittorrent = "qbittorrent"
-	SectionDownloaders = "downloaders"
-	SectionTMDB        = "tmdb"
-	SectionLibrary     = "library"
-	SectionPlugins     = "plugins"
+	SectionServer       = "server"
+	SectionDatabase     = "database"
+	SectionQBittorrent  = "qbittorrent"
+	SectionDownloaders  = "downloaders"
+	SectionPathMappings = "path_mappings"
+	SectionTMDB         = "tmdb"
+	SectionLibrary      = "library"
+	SectionPlugins      = "plugins"
 )
 
 // ErrConfigNotFound indicates no configuration was found in the database.
@@ -49,7 +50,7 @@ func LoadFromDB(db *gorm.DB) (*Config, error) {
 
 	// Verify that at least one core configuration section exists
 	hasSection := false
-	for _, sec := range []string{SectionServer, SectionDatabase, SectionQBittorrent, SectionDownloaders, SectionTMDB, SectionLibrary, SectionPlugins} {
+	for _, sec := range []string{SectionServer, SectionDatabase, SectionQBittorrent, SectionDownloaders, SectionPathMappings, SectionTMDB, SectionLibrary, SectionPlugins} {
 		if _, exists := settingsMap[sec]; exists {
 			hasSection = true
 			break
@@ -73,6 +74,9 @@ func LoadFromDB(db *gorm.DB) (*Config, error) {
 	}
 	if val, ok := settingsMap[SectionDownloaders]; ok && strings.TrimSpace(val) != "" {
 		_ = json.Unmarshal([]byte(val), &cfg.Downloaders)
+	}
+	if val, ok := settingsMap[SectionPathMappings]; ok && strings.TrimSpace(val) != "" {
+		_ = json.Unmarshal([]byte(val), &cfg.PathMappings)
 	}
 	if val, ok := settingsMap[SectionTMDB]; ok && strings.TrimSpace(val) != "" {
 		_ = json.Unmarshal([]byte(val), &cfg.TMDB)
@@ -109,6 +113,7 @@ func SaveToDB(db *gorm.DB, cfg *Config) error {
 		{SectionDatabase, "database", "Database connection configuration", cfg.Database},
 		{SectionQBittorrent, "downloader", "qBittorrent client configuration", cfg.QBittorrent},
 		{SectionDownloaders, "downloader", "Configured downloaders list", cfg.Downloaders},
+		{SectionPathMappings, "pathmapper", "Directory path mapping rules", cfg.PathMappings},
 		{SectionTMDB, "scraper", "TMDB metadata scraping configuration", cfg.TMDB},
 		{SectionLibrary, "library", "Media library directory and link mode configuration", cfg.Library},
 		{SectionPlugins, "plugins", "Plugin manager configuration", cfg.Plugins},

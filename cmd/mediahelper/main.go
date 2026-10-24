@@ -30,6 +30,7 @@ import (
 	_ "github.com/jackie8tao/mediahelper/internal/downloader/qbittorrent"
 	_ "github.com/jackie8tao/mediahelper/internal/downloader/transmission"
 	"github.com/jackie8tao/mediahelper/internal/organizer"
+	"github.com/jackie8tao/mediahelper/internal/pathmapper"
 	"github.com/jackie8tao/mediahelper/internal/pipeline"
 	"github.com/jackie8tao/mediahelper/internal/plugin"
 	"github.com/jackie8tao/mediahelper/internal/scraper"
@@ -77,8 +78,12 @@ func main() {
 		}
 	}
 
-	// 4. 初始化流水线组件注册中心并根据配置载入下载器组件
+	// 4. 初始化流水线组件注册中心并载入组件
 	compRegistry := pipeline.NewComponentRegistry()
+	if _, err := pathmapper.RegisterComponent(cfg, compRegistry); err != nil {
+		slog.Error("Failed to register path mapper component", "error", err)
+	}
+
 	dlComps, err := downloader.RegisterComponents(cfg, compRegistry)
 	if err != nil {
 		slog.Error("Failed to register downloader components", "error", err)

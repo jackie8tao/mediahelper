@@ -10,8 +10,8 @@ type Torrent struct {
 	Name        string   `json:"name"`
 	Category    string   `json:"category"`
 	Tags        []string `json:"tags"`
-	SavePath    string   `json:"save_path"`    // Actual download path (mapped to local path)
-	ContentPath string   `json:"content_path"` // Content root path (mapped to local path)
+	SavePath    string   `json:"save_path"`    // Download directory path as reported by the downloader
+	ContentPath string   `json:"content_path"` // Content root path as reported by the downloader
 	Progress    float64  `json:"progress"`     // Download progress (0.0 - 1.0)
 	State       string   `json:"state"`        // Torrent state (e.g. pausedUP, uploading, downloading)
 	Size        int64    `json:"size"`         // Total size in bytes

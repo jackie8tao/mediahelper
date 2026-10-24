@@ -13,9 +13,8 @@ import (
 
 // Client wraps autobrr/go-qbittorrent and implements downloader.Downloader.
 type Client struct {
-	cfg        config.QBittorrentConfig
-	client     *qb.Client
-	pathMapper *downloader.PathMapper
+	cfg    config.QBittorrentConfig
+	client *qb.Client
 }
 
 func init() {
@@ -45,12 +44,10 @@ func NewClient(cfg config.QBittorrentConfig) (*Client, error) {
 	}
 
 	client := qb.NewClient(qbCfg)
-	pathMapper := downloader.NewPathMapper(cfg.PathMappings)
 
 	return &Client{
-		cfg:        cfg,
-		client:     client,
-		pathMapper: pathMapper,
+		cfg:    cfg,
+		client: client,
 	}, nil
 }
 
@@ -140,8 +137,6 @@ func (c *Client) GetCompletedTorrents(ctx context.Context, categories []string) 
 // convertTorrent maps qBittorrent entity to the domain Torrent model.
 func (c *Client) convertTorrent(t qb.Torrent) downloader.Torrent {
 	tags := parseTags(t.Tags)
-	savePath := c.pathMapper.ToLocal(t.SavePath)
-	contentPath := c.pathMapper.ToLocal(t.ContentPath)
 	isCompleted := t.Progress >= 1.0 || t.CompletionOn > 0
 
 	return downloader.Torrent{
@@ -149,8 +144,8 @@ func (c *Client) convertTorrent(t qb.Torrent) downloader.Torrent {
 		Name:        t.Name,
 		Category:    t.Category,
 		Tags:        tags,
-		SavePath:    savePath,
-		ContentPath: contentPath,
+		SavePath:    t.SavePath,
+		ContentPath: t.ContentPath,
 		Progress:    t.Progress,
 		State:       string(t.State),
 		Size:        t.Size,

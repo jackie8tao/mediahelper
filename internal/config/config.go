@@ -9,13 +9,14 @@ import (
 
 // Config represents the system-wide global configuration.
 type Config struct {
-	Server      ServerConfig               `yaml:"server" json:"server"`
-	Database    DatabaseConfig             `yaml:"database" json:"database"`
-	QBittorrent QBittorrentConfig          `yaml:"qbittorrent" json:"qbittorrent"`
-	Downloaders []DownloaderInstanceConfig `yaml:"downloaders" json:"downloaders"`
-	TMDB        TMDBConfig                 `yaml:"tmdb" json:"tmdb"`
-	Library     LibraryConfig              `yaml:"library" json:"library"`
-	Plugins     PluginConfig               `yaml:"plugins" json:"plugins"`
+	Server       ServerConfig               `yaml:"server" json:"server"`
+	Database     DatabaseConfig             `yaml:"database" json:"database"`
+	QBittorrent  QBittorrentConfig          `yaml:"qbittorrent" json:"qbittorrent"`
+	Downloaders  []DownloaderInstanceConfig `yaml:"downloaders" json:"downloaders"`
+	PathMappings []PathMapping              `yaml:"path_mappings" json:"path_mappings"`
+	TMDB         TMDBConfig                 `yaml:"tmdb" json:"tmdb"`
+	Library      LibraryConfig              `yaml:"library" json:"library"`
+	Plugins      PluginConfig               `yaml:"plugins" json:"plugins"`
 }
 
 // DatabaseConfig holds database connection parameters.
@@ -148,6 +149,17 @@ func (c *Config) GetDownloaderConfigs() []DownloaderInstanceConfig {
 		return []DownloaderInstanceConfig{c.QBittorrent.ToInstanceConfig("downloader")}
 	}
 
+	return nil
+}
+
+// GetPathMappings returns global directory path mappings, falling back to legacy qbittorrent path mappings.
+func (c *Config) GetPathMappings() []PathMapping {
+	if len(c.PathMappings) > 0 {
+		return c.PathMappings
+	}
+	if len(c.QBittorrent.PathMappings) > 0 {
+		return c.QBittorrent.PathMappings
+	}
 	return nil
 }
 

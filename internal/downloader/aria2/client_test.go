@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"testing"
 
 	"github.com/jackie8tao/mediahelper/internal/config"
@@ -171,7 +170,7 @@ func TestAria2Client(t *testing.T) {
 	assert.Equal(t, "aria_completed_hash", completedTask.Hash)
 	assert.True(t, completedTask.IsCompleted)
 	assert.Equal(t, "Movie.2023.mkv", completedTask.Name)
-	assert.Equal(t, filepath.FromSlash("/local/downloads/movie"), completedTask.SavePath)
+	assert.Equal(t, "/downloads/movie", completedTask.SavePath)
 	assert.Equal(t, "movie", completedTask.Category)
 
 	assert.Equal(t, "aria_active_hash", activeTask.Hash)
