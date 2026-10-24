@@ -37,7 +37,6 @@ import (
 	"github.com/jackie8tao/mediahelper/internal/scraper"
 	"github.com/jackie8tao/mediahelper/internal/scraper/tmdb"
 	"github.com/jackie8tao/mediahelper/internal/server"
-	"github.com/jackie8tao/mediahelper/internal/service"
 	"github.com/jackie8tao/mediahelper/plugins/jellyfin"
 	"github.com/jackie8tao/mediahelper/plugins/notify"
 )
@@ -127,16 +126,8 @@ func main() {
 		slog.Warn("TMDB api_key is empty, metadata scraping is disabled")
 	}
 
-	orgComps, err := organizer.RegisterComponents(cfg, compRegistry, scraperSvc)
-	if err != nil {
+	if _, err := organizer.RegisterComponents(cfg, compRegistry, scraperSvc); err != nil {
 		slog.Error("Failed to register organizer components", "error", err)
-	}
-
-	var org *organizer.Organizer
-	if len(orgComps) > 0 {
-		org = orgComps[0].Organizer()
-	} else {
-		org = organizer.NewOrganizer(*cfg, scraperSvc)
 	}
 
 	// 5. 初始化插件管理器并载入插件
@@ -151,28 +142,20 @@ func main() {
 	cancelInitPlugin()
 	_ = pluginMgr.StartAll(context.Background())
 
-	// 6. 初始化核心流水线协调器
-	pipelineSvc := service.NewPipeline(cfg, dl, scraperSvc, org, pluginMgr)
-
-	// 7. 启动流水线引擎 (负责自愈与 Cron 调度)
+	// 6. 启动流水线引擎 (初始化默认流水线、自愈恢复与 Cron 调度)
 	var pipelineEngine *pipeline.Engine
 	if db != nil {
 		pipelineEngine = pipeline.NewEngine(db, compRegistry)
+		if err := pipeline.SeedDefaultPipelines(context.Background(), pipelineEngine.Repo(), cfg); err != nil {
+			slog.Warn("Failed to seed default pipelines", "error", err)
+		}
 		if err := pipelineEngine.Start(context.Background()); err != nil {
 			slog.Error("Failed to start pipeline engine", "error", err)
 		}
 	}
 
-	// 8. 启动后台定时同步 Worker
-	workerCtx, cancelWorker := context.WithCancel(context.Background())
-	defer cancelWorker()
-
-	if dl != nil && cfg.QBittorrent.Enabled {
-		go pipelineSvc.StartBackgroundWorker(workerCtx)
-	}
-
-	// 9. 启动 HTTP API & Webhook Web 服务
-	srv := server.New(cfg, pipelineSvc)
+	// 7. 启动 HTTP API & Webhook Web 服务
+	srv := server.New(cfg, pipelineEngine, compRegistry, pluginMgr)
 	go func() {
 		if err := srv.Start(); err != nil {
 			slog.Error("HTTP Server failed to start", "error", err)
@@ -192,9 +175,6 @@ func main() {
 	if pipelineEngine != nil {
 		pipelineEngine.Stop()
 	}
-
-	// 取消后台 Worker
-	cancelWorker()
 
 	// 停止 HTTP 服务
 	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
