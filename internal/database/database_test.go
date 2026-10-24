@@ -11,7 +11,7 @@ func TestInitDB_Memory(t *testing.T) {
 		t.Fatalf("InitDB in memory failed: %v", err)
 	}
 
-	// 1. 测试 TorrentRecord CRUD
+	// 1. Test TorrentRecord CRUD
 	t.Run("TorrentRecord CRUD", func(t *testing.T) {
 		record := TorrentRecord{
 			Hash:        "mock_hash_001",
@@ -35,7 +35,7 @@ func TestInitDB_Memory(t *testing.T) {
 			t.Errorf("record name mismatch: %s", query.Name)
 		}
 
-		// 更新状态
+		// Update status
 		if err := db.Model(&query).Update("status", "success").Error; err != nil {
 			t.Fatalf("update status error: %v", err)
 		}
@@ -47,15 +47,15 @@ func TestInitDB_Memory(t *testing.T) {
 		}
 	})
 
-	// 2. 测试 TaskHistory
+	// 2. Test TaskHistory CRUD
 	t.Run("TaskHistory CRUD", func(t *testing.T) {
 		history := TaskHistory{
 			TorrentHash: "mock_hash_001",
 			TorrentName: "Oppenheimer.2023.2160p.mkv",
-			Title:       "奥本海默",
+			Title:       "Oppenheimer",
 			Year:        2023,
 			MediaType:   "movie",
-			TargetDir:   "D:/Media/Movies/奥本海默 (2023)",
+			TargetDir:   "D:/Media/Movies/Oppenheimer (2023)",
 			FileCount:   1,
 			Status:      "success",
 			CreatedAt:   time.Now(),
@@ -76,11 +76,11 @@ func TestInitDB_Memory(t *testing.T) {
 		}
 	})
 
-	// 3. 测试 MediaMapping
+	// 3. Test MediaMapping CRUD
 	t.Run("MediaMapping CRUD", func(t *testing.T) {
 		mapping := MediaMapping{
-			RawTitle:     "漫长的季节",
-			TargetTitle:  "漫长的季节",
+			RawTitle:     "The Long Season",
+			TargetTitle:  "The Long Season",
 			TargetYear:   2023,
 			TargetTMDBID: 224884,
 		}
@@ -89,21 +89,21 @@ func TestInitDB_Memory(t *testing.T) {
 			t.Fatalf("create MediaMapping error: %v", err)
 		}
 
-		// 测试唯一索引限制
+		// Test unique constraint error
 		dup := MediaMapping{
-			RawTitle:    "漫长的季节",
-			TargetTitle: "其他名称",
+			RawTitle:    "The Long Season",
+			TargetTitle: "Another Name",
 		}
 		if err := db.Create(&dup).Error; err == nil {
 			t.Errorf("expected unique constraint error for duplicate RawTitle")
 		}
 	})
 
-	// 4. 测试 Pipeline 及关联执行实体 CRUD
+	// 4. Test Pipeline and Execution CRUD with JSON serialization
 	t.Run("Pipeline and Execution CRUD", func(t *testing.T) {
 		pipeline := Pipeline{
-			Name:        "默认自动化入库流水线",
-			Description: "下载完成后自动解析、TMDB刮削与归档",
+			Name:        "Default Automated Pipeline",
+			Description: "Parses, scrapes and organizes media upon download completion",
 			Enabled:     true,
 			Triggers: []TriggerConfig{
 				{
@@ -120,7 +120,7 @@ func TestInitDB_Memory(t *testing.T) {
 			Steps: []StepConfig{
 				{
 					ID:        "parse",
-					Name:      "智能标题识别",
+					Name:      "Parse Title",
 					Component: "parser",
 					Params: map[string]any{
 						"name": "{{ event.name }}",
@@ -128,7 +128,7 @@ func TestInitDB_Memory(t *testing.T) {
 				},
 				{
 					ID:              "scrape",
-					Name:            "TMDB刮削",
+					Name:            "Scrape TMDB",
 					Component:       "scraper",
 					When:            "steps.parse.title != ''",
 					ContinueOnError: true,
@@ -143,7 +143,7 @@ func TestInitDB_Memory(t *testing.T) {
 			t.Fatalf("expected pipeline ID > 0")
 		}
 
-		// 查询验证 JSON 序列化反序列化是否正常
+		// Verify JSON serialization and deserialization
 		var query Pipeline
 		if err := db.First(&query, "id = ?", pipeline.ID).Error; err != nil {
 			t.Fatalf("query Pipeline error: %v", err)
@@ -155,7 +155,7 @@ func TestInitDB_Memory(t *testing.T) {
 			t.Errorf("expected 2 steps, got %+v", query.Steps)
 		}
 
-		// 创建执行实例与步骤执行记录
+		// Create execution instance and step execution records
 		now := time.Now()
 		exec := PipelineExecution{
 			ID:            "exec-test-uuid-001",
@@ -177,7 +177,7 @@ func TestInitDB_Memory(t *testing.T) {
 		stepExec := StepExecution{
 			ExecutionID: exec.ID,
 			StepID:      "parse",
-			StepName:    "智能标题识别",
+			StepName:    "Parse Title",
 			ComponentID: "parser",
 			Status:      "success",
 			InputData: map[string]any{
@@ -194,7 +194,7 @@ func TestInitDB_Memory(t *testing.T) {
 			t.Fatalf("create StepExecution error: %v", err)
 		}
 
-		// 关联查询验证
+		// Verify relation preloading
 		var queryExec PipelineExecution
 		if err := db.Preload("Steps").First(&queryExec, "id = ?", exec.ID).Error; err != nil {
 			t.Fatalf("query PipelineExecution with Steps error: %v", err)
@@ -204,6 +204,41 @@ func TestInitDB_Memory(t *testing.T) {
 		}
 		if queryExec.Steps[0].OutputData["title"] != "Oppenheimer" {
 			t.Errorf("expected output title 'Oppenheimer', got %v", queryExec.Steps[0].OutputData["title"])
+		}
+	})
+
+	// 5. Test SystemSetting CRUD
+	t.Run("SystemSetting CRUD", func(t *testing.T) {
+		setting := SystemSetting{
+			Key:         "server",
+			Value:       `{"host":"0.0.0.0","port":9090}`,
+			Category:    "server",
+			Description: "HTTP server network configuration",
+			UpdatedAt:   time.Now(),
+		}
+
+		if err := db.Create(&setting).Error; err != nil {
+			t.Fatalf("create SystemSetting error: %v", err)
+		}
+
+		var query SystemSetting
+		if err := db.First(&query, "key = ?", "server").Error; err != nil {
+			t.Fatalf("query SystemSetting error: %v", err)
+		}
+		if query.Category != "server" || query.Value != `{"host":"0.0.0.0","port":9090}` {
+			t.Errorf("query SystemSetting mismatch: %+v", query)
+		}
+
+		// Update
+		query.Value = `{"host":"127.0.0.1","port":9091}`
+		if err := db.Save(&query).Error; err != nil {
+			t.Fatalf("update SystemSetting error: %v", err)
+		}
+
+		var updated SystemSetting
+		_ = db.First(&updated, "key = ?", "server")
+		if updated.Value != `{"host":"127.0.0.1","port":9091}` {
+			t.Errorf("expected updated value, got %s", updated.Value)
 		}
 	})
 }

@@ -7,74 +7,74 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config 系统全局配置
+// Config represents the system-wide global configuration.
 type Config struct {
-	Server      ServerConfig      `yaml:"server"`
-	Database    DatabaseConfig    `yaml:"database"`
-	QBittorrent QBittorrentConfig `yaml:"qbittorrent"`
-	TMDB        TMDBConfig        `yaml:"tmdb"`
-	Library     LibraryConfig     `yaml:"library"`
-	Plugins     PluginConfig      `yaml:"plugins"`
+	Server      ServerConfig      `yaml:"server" json:"server"`
+	Database    DatabaseConfig    `yaml:"database" json:"database"`
+	QBittorrent QBittorrentConfig `yaml:"qbittorrent" json:"qbittorrent"`
+	TMDB        TMDBConfig        `yaml:"tmdb" json:"tmdb"`
+	Library     LibraryConfig     `yaml:"library" json:"library"`
+	Plugins     PluginConfig      `yaml:"plugins" json:"plugins"`
 }
 
-// DatabaseConfig 数据库配置
+// DatabaseConfig holds database connection parameters.
 type DatabaseConfig struct {
-	DSN string `yaml:"dsn"` // 数据库连接字符串或 SQLite 文件路径，例如: data/mediahelper.db
+	DSN string `yaml:"dsn" json:"dsn"` // Database connection string or SQLite file path (e.g. data/mediahelper.db)
 }
 
-// PluginConfig 插件系统全局配置
+// PluginConfig holds global configuration for the plugin system.
 type PluginConfig struct {
-	Enabled bool                              `yaml:"enabled"` // 是否启用插件机制
-	Items   map[string]map[string]interface{} `yaml:"items"`   // 每个插件的专属自定义配置
+	Enabled bool                              `yaml:"enabled" json:"enabled"` // Whether the plugin system is enabled
+	Items   map[string]map[string]interface{} `yaml:"items" json:"items"`     // Custom configurations per plugin ID
 }
 
-// ServerConfig HTTP 服务配置
+// ServerConfig holds HTTP server network parameters.
 type ServerConfig struct {
-	Port int    `yaml:"port"`
-	Host string `yaml:"host"`
+	Port int    `yaml:"port" json:"port"`
+	Host string `yaml:"host" json:"host"`
 }
 
-// LibraryConfig 媒体库整理配置
+// LibraryConfig holds media library directory and linking mode settings.
 type LibraryConfig struct {
-	MovieDir    string `yaml:"movie_dir"`     // 电影库根目录
-	TVDir       string `yaml:"tv_dir"`        // 电视剧库根目录
-	AnimeDir    string `yaml:"anime_dir"`     // 动漫库根目录 (为空时默认归入 TVDir)
-	LinkMode    string `yaml:"link_mode"`     // 整理模式: hardlink (默认), copy, move, symlink
-	MinFileSize int64  `yaml:"min_file_size"` // 最小有效视频文件大小 (字节，默认 50MB)
+	MovieDir    string `yaml:"movie_dir" json:"movie_dir"`         // Root directory for movie library
+	TVDir       string `yaml:"tv_dir" json:"tv_dir"`               // Root directory for TV show library
+	AnimeDir    string `yaml:"anime_dir" json:"anime_dir"`         // Root directory for anime library (falls back to TVDir if empty)
+	LinkMode    string `yaml:"link_mode" json:"link_mode"`         // Organize mode: hardlink (default), copy, move, symlink
+	MinFileSize int64  `yaml:"min_file_size" json:"min_file_size"` // Minimum file size in bytes for valid video files (default: 50MB)
 }
 
-// TMDBConfig TheMovieDatabase 刮削配置
+// TMDBConfig holds TheMovieDatabase scraping configuration.
 type TMDBConfig struct {
-	APIKey         string `yaml:"api_key"`          // TMDB API 密钥 (v3 auth)
-	BaseURL        string `yaml:"base_url"`         // API 地址，国内网络可配置反代，如 https://api.tmdb.org/3
-	ImageBaseURL   string `yaml:"image_base_url"`   // 图片 CDN 地址，如 https://image.tmdb.org/t/p/original
-	Language       string `yaml:"language"`         // 语言代码，默认 zh-CN
-	Proxy          string `yaml:"proxy"`            // HTTP/SOCKS5 代理地址，如 http://127.0.0.1:7890
-	GenerateNFO    bool   `yaml:"generate_nfo"`     // 是否生成 NFO 刮削文件
-	DownloadImages bool   `yaml:"download_images"`  // 是否下载海报与背景图
+	APIKey         string `yaml:"api_key" json:"api_key"`                   // TMDB API key (v3 auth)
+	BaseURL        string `yaml:"base_url" json:"base_url"`                 // API base URL, customizable for reverse proxies
+	ImageBaseURL   string `yaml:"image_base_url" json:"image_base_url"`     // Image CDN base URL
+	Language       string `yaml:"language" json:"language"`                 // Target language code, default zh-CN
+	Proxy          string `yaml:"proxy" json:"proxy"`                       // Optional HTTP/SOCKS5 proxy address
+	GenerateNFO    bool   `yaml:"generate_nfo" json:"generate_nfo"`         // Whether to generate NFO metadata files
+	DownloadImages bool   `yaml:"download_images" json:"download_images"`   // Whether to download poster and backdrop artwork
 }
 
-// PathMapping 路径映射配置 (针对 Docker / 远程 qBittorrent)
+// PathMapping maps paths between remote/docker and local environments.
 type PathMapping struct {
-	Remote string `yaml:"remote"` // 远程/容器内路径前缀
-	Local  string `yaml:"local"`  // 本机/当前容器内路径前缀
+	Remote string `yaml:"remote" json:"remote"` // Remote or container internal path prefix
+	Local  string `yaml:"local" json:"local"`   // Local or host accessible path prefix
 }
 
-// QBittorrentConfig qBittorrent 客户端对接配置
+// QBittorrentConfig holds connection and management settings for qBittorrent.
 type QBittorrentConfig struct {
-	Enabled       bool          `yaml:"enabled"`
-	URL           string        `yaml:"url"`           // WebUI 地址，例如 http://127.0.0.1:8080
-	Username      string        `yaml:"username"`      // 用户名
-	Password      string        `yaml:"password"`      // 密码
-	Categories    []string      `yaml:"categories"`    // 监控的分类列表，为空则不过滤分类
-	AutoTag       bool          `yaml:"auto_tag"`      // 是否自动回写标签
-	SuccessTag    string        `yaml:"success_tag"`   // 整理成功后赋予的标签，默认 MediaHelper:Done
-	FailTag       string        `yaml:"fail_tag"`      // 整理失败后赋予的标签，默认 MediaHelper:Error
-	PollInterval  int           `yaml:"poll_interval"` // 轮询周期(秒)，默认 30
-	PathMappings  []PathMapping `yaml:"path_mappings"` // 路径映射规则列表
+	Enabled      bool          `yaml:"enabled" json:"enabled"`
+	URL          string        `yaml:"url" json:"url"`                     // WebUI URL, e.g. http://127.0.0.1:8080
+	Username     string        `yaml:"username" json:"username"`           // Username
+	Password     string        `yaml:"password" json:"password"`           // Password
+	Categories   []string      `yaml:"categories" json:"categories"`       // Watched category list; empty means all categories
+	AutoTag      bool          `yaml:"auto_tag" json:"auto_tag"`           // Whether to tag processed torrents
+	SuccessTag   string        `yaml:"success_tag" json:"success_tag"`     // Tag applied upon successful organization
+	FailTag      string        `yaml:"fail_tag" json:"fail_tag"`           // Tag applied upon failed organization
+	PollInterval int           `yaml:"poll_interval" json:"poll_interval"` // Background poll interval in seconds (default: 30)
+	PathMappings []PathMapping `yaml:"path_mappings" json:"path_mappings"` // Path mapping rules list
 }
 
-// DefaultConfig 获取默认配置
+// DefaultConfig returns default configuration values.
 func DefaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
@@ -119,7 +119,7 @@ func DefaultConfig() *Config {
 	}
 }
 
-// LoadConfig 从指定 YAML 文件加载配置
+// LoadConfig loads configuration from a specified YAML file path.
 func LoadConfig(path string) (*Config, error) {
 	cfg := DefaultConfig()
 

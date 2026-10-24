@@ -49,19 +49,29 @@ func main() {
 
 	slog.Info("Starting MediaHelper...", "config", *configPath)
 
-	// 1. 加载全局配置
-	cfg, err := config.LoadConfig(*configPath)
+	// 1. 加载本地引导配置 (用于获取数据库连接 DSN 等参数)
+	fileCfg, err := config.LoadConfig(*configPath)
 	if err != nil {
 		slog.Warn("Failed to load config file, using default configuration", "error", err)
-		cfg = config.DefaultConfig()
+		fileCfg = config.DefaultConfig()
 	}
 
 	// 2. 初始化 SQLite 数据库存储 (自动建表与 WAL 模式开启)
-	db, err := database.InitDB(cfg.Database.DSN)
+	db, err := database.InitDB(fileCfg.Database.DSN)
 	if err != nil {
 		slog.Error("Failed to initialize database", "error", err)
-	} else {
-		_ = db
+	}
+
+	// 3. 优先从数据库载入最新系统配置 (若数据库无记录则自动将本地配置初始化入库)
+	cfg := fileCfg
+	if db != nil {
+		dbCfg, err := config.LoadOrInit(db, fileCfg)
+		if err != nil {
+			slog.Warn("Failed to load config from database, using file configuration", "error", err)
+		} else {
+			cfg = dbCfg
+			slog.Info("System configuration loaded successfully from database")
+		}
 	}
 
 	// 3. 初始化下载器 (qBittorrent)

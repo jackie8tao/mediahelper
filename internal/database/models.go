@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// TorrentRecord 种子任务记录实体
+// TorrentRecord represents a downloader torrent task entity.
 type TorrentRecord struct {
 	Hash        string    `gorm:"primaryKey;size:64;not null" json:"hash"`
 	Name        string    `gorm:"size:512;not null" json:"name"`
@@ -16,7 +16,7 @@ type TorrentRecord struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-// TaskHistory 归档整理执行历史记录实体
+// TaskHistory represents a media organization execution history entry.
 type TaskHistory struct {
 	ID          uint      `gorm:"primaryKey;autoIncrement" json:"id"`
 	TorrentHash string    `gorm:"size:64;index" json:"torrent_hash"`
@@ -31,18 +31,18 @@ type TaskHistory struct {
 	CreatedAt   time.Time `gorm:"index" json:"created_at"`
 }
 
-// MediaMapping 剧名纠错映射实体
+// MediaMapping represents a title correction and ID override mapping.
 type MediaMapping struct {
 	ID           uint      `gorm:"primaryKey;autoIncrement" json:"id"`
-	RawTitle     string    `gorm:"size:256;uniqueIndex;not null" json:"raw_title"` // 原始标题关键词或特征
-	TargetTitle  string    `gorm:"size:256;not null" json:"target_title"`          // 矫正后的正式名称
-	TargetYear   int       `json:"target_year"`                                    // 矫正后的年份
-	TargetTMDBID int       `json:"target_tmdb_id"`                                 // 强制绑定的 TMDB ID
+	RawTitle     string    `gorm:"size:256;uniqueIndex;not null" json:"raw_title"` // Raw title keyword or pattern
+	TargetTitle  string    `gorm:"size:256;not null" json:"target_title"`          // Corrected official title
+	TargetYear   int       `json:"target_year"`                                    // Corrected release year
+	TargetTMDBID int       `json:"target_tmdb_id"`                                 // Forced TMDB ID binding
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
-// Pipeline 流水线定义实体
+// Pipeline represents a pipeline workflow definition entity.
 type Pipeline struct {
 	ID          uint            `gorm:"primaryKey;autoIncrement" json:"id"`
 	Name        string          `gorm:"size:128;uniqueIndex;not null" json:"name"`
@@ -55,7 +55,7 @@ type Pipeline struct {
 	UpdatedAt   time.Time       `json:"updated_at"`
 }
 
-// TriggerConfig 触发器配置定义
+// TriggerConfig defines a trigger condition for a pipeline.
 type TriggerConfig struct {
 	Type   string `json:"type"`             // event / cron / manual
 	Source string `json:"source,omitempty"` // e.g. "webhook:qbittorrent", "downloader:complete"
@@ -63,23 +63,23 @@ type TriggerConfig struct {
 	Filter string `json:"filter,omitempty"` // e.g. "event.category == 'movie'"
 }
 
-// StepConfig 步骤配置定义
+// StepConfig defines a step within a pipeline workflow.
 type StepConfig struct {
-	ID              string         `json:"id"`                          // 流水线内唯一标识，如 "parse"
-	Name            string         `json:"name"`                        // 友好展示名称
-	Component       string         `json:"component"`                   // 绑定的组件 ID，如 "parser"
-	When            string         `json:"when,omitempty"`              // 步骤前置条件表达式
-	Params          map[string]any `json:"params,omitempty"`            // 传递给组件的入参模板
-	ContinueOnError bool           `json:"continue_on_error,omitempty"` // 步骤失败是否继续执行
-	TimeoutSeconds  int            `json:"timeout_seconds,omitempty"`   // 超时限制 (秒)
+	ID              string         `json:"id"`                          // Unique identifier within pipeline, e.g. "parse"
+	Name            string         `json:"name"`                        // Friendly display name
+	Component       string         `json:"component"`                   // Registered component ID, e.g. "parser"
+	When            string         `json:"when,omitempty"`              // Step execution condition expression
+	Params          map[string]any `json:"params,omitempty"`            // Component input parameter templates
+	ContinueOnError bool           `json:"continue_on_error,omitempty"` // Whether to continue on step failure
+	TimeoutSeconds  int            `json:"timeout_seconds,omitempty"`   // Step timeout limit in seconds
 }
 
-// PipelineExecution 流水线执行实例实体
+// PipelineExecution represents an instance of a running or completed pipeline.
 type PipelineExecution struct {
 	ID            string          `gorm:"primaryKey;size:64;not null" json:"id"`
 	PipelineID    uint            `gorm:"index;not null" json:"pipeline_id"`
 	PipelineName  string          `gorm:"size:128" json:"pipeline_name"`
-	TriggerSource string          `gorm:"size:64;index" json:"trigger_source"` // 触发源
+	TriggerSource string          `gorm:"size:64;index" json:"trigger_source"` // Trigger source identifier
 	TriggerData   map[string]any  `gorm:"serializer:json" json:"trigger_data"`
 	Status        string          `gorm:"size:32;index" json:"status"` // pending / running / success / failed / interrupted / skipped
 	Error         string          `gorm:"type:text" json:"error,omitempty"`
@@ -90,7 +90,7 @@ type PipelineExecution struct {
 	UpdatedAt     time.Time       `json:"updated_at"`
 }
 
-// StepExecution 步骤执行记录实体
+// StepExecution represents the execution record of an individual step within a pipeline execution.
 type StepExecution struct {
 	ID          uint           `gorm:"primaryKey;autoIncrement" json:"id"`
 	ExecutionID string         `gorm:"size:64;index;not null" json:"execution_id"`
@@ -106,4 +106,13 @@ type StepExecution struct {
 	FinishedAt  *time.Time     `json:"finished_at,omitempty"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
+}
+
+// SystemSetting represents a persistent system configuration key-value item.
+type SystemSetting struct {
+	Key         string    `gorm:"primaryKey;size:128;not null" json:"key"`
+	Value       string    `gorm:"type:text;not null" json:"value"`
+	Category    string    `gorm:"size:64;index" json:"category"`
+	Description string    `gorm:"size:512" json:"description"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
