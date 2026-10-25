@@ -26,7 +26,6 @@ import (
 	"github.com/jackie8tao/mediahelper/internal/config"
 	"github.com/jackie8tao/mediahelper/internal/database"
 	"github.com/jackie8tao/mediahelper/internal/downloader"
-	_ "github.com/jackie8tao/mediahelper/internal/downloader/aria2"
 	_ "github.com/jackie8tao/mediahelper/internal/downloader/qbittorrent"
 	_ "github.com/jackie8tao/mediahelper/internal/downloader/transmission"
 	"github.com/jackie8tao/mediahelper/internal/organizer"
