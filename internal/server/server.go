@@ -6,13 +6,11 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/jackie8tao/mediahelper/docs"
 	"github.com/jackie8tao/mediahelper/internal/config"
-	"github.com/jackie8tao/mediahelper/internal/downloader"
 	"github.com/jackie8tao/mediahelper/internal/pathmapper"
 	"github.com/jackie8tao/mediahelper/internal/pipeline"
 	"github.com/jackie8tao/mediahelper/internal/plugin"
@@ -63,8 +61,6 @@ func (s *Server) setupRoutes() {
 		v1.GET("/status", s.handleStatus)
 		v1.GET("/history", s.handleHistory)
 		v1.GET("/plugins", s.handlePlugins)
-		v1.GET("/downloader/torrents", s.handleDownloaderTorrents)
-		v1.POST("/sync", s.handleSync)
 		v1.POST("/webhook/qbittorrent", s.handleQBWebhook)
 
 		// Pipeline management endpoints
@@ -194,152 +190,6 @@ func (s *Server) handlePlugins(c *gin.Context) {
 		"code":  0,
 		"total": len(list),
 		"data":  list,
-	})
-}
-
-// handleDownloaderTorrents returns active torrent tasks from registered downloaders.
-// @Summary Query Downloader Tasks
-// @Description Retrieves current torrent tasks from registered downloader components
-// @Tags Downloader
-// @Produce json
-// @Param filter query string false "State filter (all, downloading, completed, paused)" default(all)
-// @Param category query string false "Category filter"
-// @Param downloader query string false "Specific downloader component ID (defaults to 'downloader')"
-// @Success 200 {object} map[string]interface{}
-// @Failure 503 {object} map[string]interface{}
-// @Router /api/v1/downloader/torrents [get]
-func (s *Server) handleDownloaderTorrents(c *gin.Context) {
-	dlID := c.DefaultQuery("downloader", "downloader")
-	comp, ok := s.compRegistry.Get(dlID)
-	if !ok {
-		// Fallback check for any registered downloader component
-		for _, regComp := range s.compRegistry.List() {
-			if strings.HasPrefix(regComp.ID(), "downloader") {
-				comp = regComp
-				ok = true
-				break
-			}
-		}
-	}
-
-	if !ok {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"code":  503,
-			"error": "no downloader component is registered or enabled",
-		})
-		return
-	}
-
-	dlComp, ok := comp.(*downloader.DownloaderComponent)
-	if !ok || dlComp.Downloader() == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"code":  503,
-			"error": "component is not an active downloader client",
-		})
-		return
-	}
-
-	filter := c.DefaultQuery("filter", "all")
-	category := c.Query("category")
-
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
-	defer cancel()
-
-	torrents, err := dlComp.Downloader().GetAllTorrents(ctx, filter, category)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":  500,
-			"error": fmt.Sprintf("fetch torrents failed: %v", err),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"code":       0,
-		"total":      len(torrents),
-		"downloader": dlComp.ID(),
-		"filter":     filter,
-		"category":   category,
-		"data":       torrents,
-	})
-}
-
-// handleSync triggers an immediate full scan and organization of completed torrents.
-// @Summary Manually Trigger Full Sync
-// @Description Scans downloaders for completed untagged torrents and triggers pipeline execution
-// @Tags Pipeline
-// @Produce json
-// @Success 200 {object} map[string]interface{}
-// @Router /api/v1/sync [post]
-func (s *Server) handleSync(c *gin.Context) {
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-		defer cancel()
-
-		slog.Info("Starting manual sync across registered downloaders...")
-
-		// Scan all registered downloaders
-		var dlComps []*downloader.DownloaderComponent
-		for _, comp := range s.compRegistry.List() {
-			if d, ok := comp.(*downloader.DownloaderComponent); ok && d.Downloader() != nil {
-				dlComps = append(dlComps, d)
-			}
-		}
-
-		totalTriggered := 0
-		for _, d := range dlComps {
-			dlCfg := d.Config()
-			torrents, err := d.Downloader().GetCompletedTorrents(ctx, dlCfg.Categories)
-			if err != nil {
-				slog.Warn("Failed to fetch completed torrents for downloader", "id", d.ID(), "error", err)
-				continue
-			}
-
-			successTag := dlCfg.SuccessTag
-			if successTag == "" {
-				successTag = "MediaHelper:Done"
-			}
-
-			for _, t := range torrents {
-				// Check if already tagged
-				alreadyDone := false
-				for _, tag := range t.Tags {
-					if strings.EqualFold(strings.TrimSpace(tag), successTag) {
-						alreadyDone = true
-						break
-					}
-				}
-				if alreadyDone {
-					continue
-				}
-
-				payload := map[string]any{
-					"torrent":      t,
-					"name":         t.Name,
-					"hash":         t.Hash,
-					"content_path": t.ContentPath,
-					"save_path":    t.SavePath,
-					"category":     t.Category,
-					"downloader":   d.ID(),
-				}
-
-				if s.engine != nil {
-					_, err := s.engine.TriggerEvent(ctx, "sync:manual", payload)
-					if err != nil {
-						slog.Error("Trigger sync pipeline failed", "torrent", t.Name, "error", err)
-					} else {
-						totalTriggered++
-					}
-				}
-			}
-		}
-
-		slog.Info("Manual sync triggered finished", "triggered_count", totalTriggered)
-	}()
-
-	c.JSON(http.StatusOK, gin.H{
-		"code": 0,
-		"msg":  "Manual sync triggered successfully in background",
 	})
 }
 

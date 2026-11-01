@@ -1,6 +1,7 @@
 package downloader
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -8,26 +9,26 @@ import (
 	"github.com/jackie8tao/mediahelper/internal/config"
 )
 
-// ClientFactory creates a Downloader instance from configuration.
-type ClientFactory func(cfg config.DownloaderInstanceConfig) (Downloader, error)
+// DownloaderFactory creates a Downloader instance from configuration.
+type DownloaderFactory func(cfg json.RawMessage) (Downloader, error)
 
 var (
 	factoriesMu sync.RWMutex
-	factories   = make(map[string]ClientFactory)
+	factories   = make(map[string]DownloaderFactory)
 )
 
 // RegisterFactory registers a downloader factory for a given type name (e.g. "qbittorrent").
-func RegisterFactory(downloaderType string, f ClientFactory) {
+func RegisterFactory(downloaderType string, f DownloaderFactory) {
 	factoriesMu.Lock()
 	defer factoriesMu.Unlock()
 	factories[strings.ToLower(downloaderType)] = f
 }
 
 // CreateDownloader instantiates a Downloader client for the configured instance.
-func CreateDownloader(cfg config.DownloaderInstanceConfig) (Downloader, error) {
+func CreateDownloader(cfg config.DownloaderComponentConfig) (Downloader, error) {
 	dlType := strings.ToLower(cfg.Type)
 	if dlType == "" {
-		dlType = "qbittorrent"
+		return nil, fmt.Errorf("downloader type cannot be empty")
 	}
 
 	factoriesMu.RLock()
@@ -38,7 +39,7 @@ func CreateDownloader(cfg config.DownloaderInstanceConfig) (Downloader, error) {
 		return nil, fmt.Errorf("unsupported downloader type '%s' (registered types: %v)", dlType, AvailableTypes())
 	}
 
-	return factory(cfg)
+	return factory(cfg.Detail)
 }
 
 // AvailableTypes returns a list of all registered downloader types.

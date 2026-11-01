@@ -26,8 +26,6 @@ import (
 	"github.com/jackie8tao/mediahelper/internal/config"
 	"github.com/jackie8tao/mediahelper/internal/database"
 	"github.com/jackie8tao/mediahelper/internal/downloader"
-	_ "github.com/jackie8tao/mediahelper/internal/downloader/qbittorrent"
-	_ "github.com/jackie8tao/mediahelper/internal/downloader/transmission"
 	"github.com/jackie8tao/mediahelper/internal/organizer"
 	"github.com/jackie8tao/mediahelper/internal/parser"
 	"github.com/jackie8tao/mediahelper/internal/pathmapper"
@@ -37,10 +35,12 @@ import (
 	"github.com/jackie8tao/mediahelper/internal/server"
 	"github.com/jackie8tao/mediahelper/plugins/jellyfin"
 	"github.com/jackie8tao/mediahelper/plugins/notify"
+
+	_ "github.com/jackie8tao/mediahelper/internal/downloader/qbittorrent"
 )
 
 func main() {
-	configPath := flag.String("config", "configs/config.yaml", "path to config file")
+	configPath := flag.String("config", "configs/config.json", "path to config file")
 	flag.Parse()
 
 	// Initialize structured logger

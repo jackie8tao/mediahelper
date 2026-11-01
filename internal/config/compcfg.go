@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/jackie8tao/mediahelper/internal/database"
-	"gopkg.in/yaml.v3"
 	"gorm.io/gorm"
 )
 
@@ -34,28 +33,22 @@ var ErrConfigNotFound = errors.New("no component configuration found in database
 
 // ComponentConfig holds dynamic pipeline and component configurations managed via API and stored in the database.
 type ComponentConfig struct {
-	Downloaders  []DownloaderInstanceConfig `yaml:"downloaders" json:"downloaders"`
-	PathMappings []PathMapperInstanceConfig `yaml:"path_mappings" json:"path_mappings"`
-	Parsers      []ParserInstanceConfig     `yaml:"parsers" json:"parsers"`
-	Scrapers     []ScraperInstanceConfig    `yaml:"scrapers" json:"scrapers"`
-	Organizers   []OrganizerInstanceConfig  `yaml:"organizers" json:"organizers"`
-	Plugins      PluginConfig               `yaml:"plugins" json:"plugins"`
+	Downloaders  []DownloaderComponentConfig `yaml:"downloaders" json:"downloaders"`
+	PathMappings []PathMapperInstanceConfig  `yaml:"path_mappings" json:"path_mappings"`
+	Parsers      []ParserInstanceConfig      `yaml:"parsers" json:"parsers"`
+	Scrapers     []ScraperInstanceConfig     `yaml:"scrapers" json:"scrapers"`
+	Organizers   []OrganizerInstanceConfig   `yaml:"organizers" json:"organizers"`
+	Plugins      PluginConfig                `yaml:"plugins" json:"plugins"`
 }
 
-// DownloaderInstanceConfig represents configuration for an individual downloader instance component.
-type DownloaderInstanceConfig struct {
-	ID           string   `yaml:"id" json:"id"`                       // Unique component ID, e.g. "downloader", "downloader:movie", "downloader:tv"
-	Type         string   `yaml:"type" json:"type"`                   // Downloader type, e.g. "qbittorrent", "transmission", "aria2"
-	Name         string   `yaml:"name" json:"name"`                   // Friendly display name
-	Enabled      bool     `yaml:"enabled" json:"enabled"`             // Whether this downloader is enabled
-	URL          string   `yaml:"url" json:"url"`                     // WebUI URL, e.g. http://127.0.0.1:8080
-	Username     string   `yaml:"username" json:"username"`           // Username
-	Password     string   `yaml:"password" json:"password"`           // Password
-	Categories   []string `yaml:"categories" json:"categories"`       // Watched categories list
-	AutoTag      bool     `yaml:"auto_tag" json:"auto_tag"`           // Whether to tag processed torrents
-	SuccessTag   string   `yaml:"success_tag" json:"success_tag"`     // Tag applied upon successful organization
-	FailTag      string   `yaml:"fail_tag" json:"fail_tag"`           // Tag applied upon failed organization
-	PollInterval int      `yaml:"poll_interval" json:"poll_interval"` // Background poll interval in seconds (default: 30)
+// DownloaderComponentConfig represents configuration for an individual downloader instance component.
+type DownloaderComponentConfig struct {
+	Enabled     bool            `yaml:"enabled" json:"enabled"`         // Whether this downloader is enabled
+	ID          string          `yaml:"id" json:"id"`                   // Unique component ID, e.g. "downloader", "downloader:movie", "downloader:tv"
+	Type        string          `yaml:"type" json:"type"`               // Downloader type, e.g. "qbittorrent", "transmission"
+	Name        string          `yaml:"name" json:"name"`               // Friendly display name
+	Description string          `yaml:"description" json:"description"` // Friendly display description
+	Detail      json.RawMessage `yaml:"detail" json:"detail"`           // download-specific configuration
 }
 
 // PathMapperInstanceConfig maps paths between remote/docker and local environments.
@@ -112,7 +105,7 @@ type PluginConfig struct {
 // DefaultComponentConfig returns default component configuration.
 func DefaultComponentConfig() *ComponentConfig {
 	return &ComponentConfig{
-		Downloaders:  make([]DownloaderInstanceConfig, 0),
+		Downloaders:  make([]DownloaderComponentConfig, 0),
 		PathMappings: make([]PathMapperInstanceConfig, 0),
 		Parsers:      make([]ParserInstanceConfig, 0),
 		Scrapers:     make([]ScraperInstanceConfig, 0),
@@ -125,11 +118,11 @@ func DefaultComponentConfig() *ComponentConfig {
 }
 
 // GetDownloaderConfigs returns all configured downloader instances.
-func (c *ComponentConfig) GetDownloaderConfigs() []DownloaderInstanceConfig {
+func (c *ComponentConfig) GetDownloaderConfigs() []DownloaderComponentConfig {
 	if len(c.Downloaders) > 0 {
 		return c.Downloaders
 	}
-	return make([]DownloaderInstanceConfig, 0)
+	return make([]DownloaderComponentConfig, 0)
 }
 
 // GetPathMappings returns global directory path mappings.
@@ -172,8 +165,8 @@ func LoadComponentConfigFromFile(path string) (*ComponentConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read component config file error: %w", err)
 	}
-	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, fmt.Errorf("parse component config yaml error: %w", err)
+	if err := json.Unmarshal(data, cfg); err != nil {
+		return nil, fmt.Errorf("parse component config json error: %w", err)
 	}
 
 	return cfg, nil
@@ -192,7 +185,7 @@ func SaveComponentConfigToFile(path string, cfg *ComponentConfig) error {
 		}
 	}
 
-	data, err := yaml.Marshal(cfg)
+	data, err := json.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("marshal component config error: %w", err)
 	}

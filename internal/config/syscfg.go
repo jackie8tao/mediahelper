@@ -1,12 +1,11 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"gopkg.in/yaml.v3"
 )
 
 // Default constants for system configuration
@@ -58,7 +57,7 @@ func LoadSystemConfigFromFile(path string) (*SystemConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read system config file error: %w", err)
 	}
-	if err := yaml.Unmarshal(data, cfg); err != nil {
+	if err := json.Unmarshal(data, cfg); err != nil {
 		return nil, fmt.Errorf("parse system config yaml error: %w", err)
 	}
 
@@ -78,7 +77,7 @@ func SaveSystemConfigToFile(path string, cfg *SystemConfig) error {
 		}
 	}
 
-	data, err := yaml.Marshal(cfg)
+	data, err := json.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("marshal system config error: %w", err)
 	}
@@ -96,59 +95,6 @@ func SaveSystemConfigToFile(path string, cfg *SystemConfig) error {
 
 // PathMapping is an alias for PathMapperInstanceConfig for backward compatibility.
 type PathMapping = PathMapperInstanceConfig
-
-// QBittorrentConfig holds legacy connection and management settings for qBittorrent.
-type QBittorrentConfig struct {
-	ID           string        `yaml:"id" json:"id"` // Optional component ID (defaults to "downloader")
-	Enabled      bool          `yaml:"enabled" json:"enabled"`
-	URL          string        `yaml:"url" json:"url"`                     // WebUI URL, e.g. http://127.0.0.1:8080
-	Username     string        `yaml:"username" json:"username"`           // Username
-	Password     string        `yaml:"password" json:"password"`           // Password
-	Categories   []string      `yaml:"categories" json:"categories"`       // Watched categories list
-	AutoTag      bool          `yaml:"auto_tag" json:"auto_tag"`           // Whether to tag processed torrents
-	SuccessTag   string        `yaml:"success_tag" json:"success_tag"`     // Tag applied upon successful organization
-	FailTag      string        `yaml:"fail_tag" json:"fail_tag"`           // Tag applied upon failed organization
-	PollInterval int           `yaml:"poll_interval" json:"poll_interval"` // Background poll interval in seconds (default: 30)
-	PathMappings []PathMapping `yaml:"path_mappings" json:"path_mappings"` // Remote to local path mapping
-}
-
-// ToInstanceConfig converts QBittorrentConfig to DownloaderInstanceConfig.
-func (q QBittorrentConfig) ToInstanceConfig(defaultID string) DownloaderInstanceConfig {
-	id := q.ID
-	if id == "" {
-		id = defaultID
-	}
-	return DownloaderInstanceConfig{
-		ID:           id,
-		Type:         "qbittorrent",
-		Name:         "qBittorrent",
-		Enabled:      q.Enabled,
-		URL:          q.URL,
-		Username:     q.Username,
-		Password:     q.Password,
-		Categories:   q.Categories,
-		AutoTag:      q.AutoTag,
-		SuccessTag:   q.SuccessTag,
-		FailTag:      q.FailTag,
-		PollInterval: q.PollInterval,
-	}
-}
-
-// ToQBittorrentConfig converts DownloaderInstanceConfig to QBittorrentConfig.
-func (d DownloaderInstanceConfig) ToQBittorrentConfig() QBittorrentConfig {
-	return QBittorrentConfig{
-		ID:           d.ID,
-		Enabled:      d.Enabled,
-		URL:          d.URL,
-		Username:     d.Username,
-		Password:     d.Password,
-		Categories:   d.Categories,
-		AutoTag:      d.AutoTag,
-		SuccessTag:   d.SuccessTag,
-		FailTag:      d.FailTag,
-		PollInterval: d.PollInterval,
-	}
-}
 
 // TMDBConfig holds legacy TheMovieDatabase scraping configuration.
 type TMDBConfig struct {
@@ -233,8 +179,6 @@ type Config struct {
 	SystemConfig    `yaml:",inline" json:"system"`
 	ComponentConfig `yaml:",inline" json:"component"`
 
-	// Legacy compatibility fields
-	QBittorrent QBittorrentConfig `yaml:"qbittorrent,omitempty" json:"qbittorrent,omitempty"`
-	TMDB        TMDBConfig        `yaml:"tmdb,omitempty" json:"tmdb,omitempty"`
-	Library     LibraryConfig     `yaml:"library,omitempty" json:"library,omitempty"`
+	TMDB    TMDBConfig    `yaml:"tmdb,omitempty" json:"tmdb,omitempty"`
+	Library LibraryConfig `yaml:"library,omitempty" json:"library,omitempty"`
 }

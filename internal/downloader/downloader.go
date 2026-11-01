@@ -1,9 +1,5 @@
 package downloader
 
-import (
-	"context"
-)
-
 // Torrent represents general metadata of a torrent download task.
 type Torrent struct {
 	Hash        string   `json:"hash"`
@@ -34,22 +30,4 @@ type TorrentFile struct {
 type Downloader interface {
 	// Name returns the downloader client name, e.g. "qBittorrent"
 	Name() string
-
-	// TestConnection verifies connectivity and authentication with the downloader WebUI
-	TestConnection(ctx context.Context) error
-
-	// GetAllTorrents returns all torrent tasks matching state filter and category
-	GetAllTorrents(ctx context.Context, filter string, category string) ([]Torrent, error)
-
-	// GetCompletedTorrents returns completed torrents matching the specified categories
-	GetCompletedTorrents(ctx context.Context, categories []string) ([]Torrent, error)
-
-	// GetTorrentFiles returns all files within a specified torrent hash
-	GetTorrentFiles(ctx context.Context, hash string) ([]TorrentFile, error)
-
-	// AddTags applies tags to the specified torrent hashes
-	AddTags(ctx context.Context, hashes []string, tags []string) error
-
-	// RemoveTags removes tags from the specified torrent hashes
-	RemoveTags(ctx context.Context, hashes []string, tags []string) error
 }
