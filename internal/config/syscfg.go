@@ -21,19 +21,19 @@ const (
 
 // SystemConfig holds essential startup configurations required before database connection.
 type SystemConfig struct {
-	Server   ServerConfig   `yaml:"server" json:"server"`
-	Database DatabaseConfig `yaml:"database" json:"database"`
+	Server   ServerConfig   `json:"server"`
+	Database DatabaseConfig `json:"database"`
 }
 
 // ServerConfig holds HTTP server network parameters.
 type ServerConfig struct {
-	Host string `yaml:"host" json:"host"`
-	Port int    `yaml:"port" json:"port"`
+	Host string `json:"host"`
+	Port int    `json:"port"`
 }
 
 // DatabaseConfig holds database connection parameters.
 type DatabaseConfig struct {
-	DSN string `yaml:"dsn" json:"dsn"` // Database connection string or SQLite file path (e.g. data/mediahelper.db)
+	DSN string `json:"dsn"` // Database connection string or SQLite file path (e.g. data/mediahelper.db)
 }
 
 // DefaultSystemConfig returns default system startup configuration.
@@ -49,7 +49,7 @@ func DefaultSystemConfig() *SystemConfig {
 	}
 }
 
-// LoadSystemConfigFromFile loads system startup configuration from a specified YAML file path.
+// LoadSystemConfigFromFile loads system startup configuration from a specified JSON file path.
 func LoadSystemConfigFromFile(path string) (*SystemConfig, error) {
 	cfg := DefaultSystemConfig()
 
@@ -58,13 +58,13 @@ func LoadSystemConfigFromFile(path string) (*SystemConfig, error) {
 		return nil, fmt.Errorf("read system config file error: %w", err)
 	}
 	if err := json.Unmarshal(data, cfg); err != nil {
-		return nil, fmt.Errorf("parse system config yaml error: %w", err)
+		return nil, fmt.Errorf("parse system config json error: %w", err)
 	}
 
 	return cfg, nil
 }
 
-// SaveSystemConfigToFile writes system startup configuration to a YAML file.
+// SaveSystemConfigToFile writes system startup configuration to a JSON file.
 func SaveSystemConfigToFile(path string, cfg *SystemConfig) error {
 	if cfg == nil {
 		return errors.New("system config is nil")
@@ -98,13 +98,13 @@ type PathMapping = PathMapperInstanceConfig
 
 // TMDBConfig holds legacy TheMovieDatabase scraping configuration.
 type TMDBConfig struct {
-	APIKey         string `yaml:"api_key" json:"api_key"`                 // TMDB API key (v3 auth)
-	BaseURL        string `yaml:"base_url" json:"base_url"`               // API base URL, customizable for reverse proxies
-	ImageBaseURL   string `yaml:"image_base_url" json:"image_base_url"`   // Image CDN base URL
-	Language       string `yaml:"language" json:"language"`               // Target language code, default zh-CN
-	Proxy          string `yaml:"proxy" json:"proxy"`                     // Optional HTTP/SOCKS5 proxy address
-	GenerateNFO    bool   `yaml:"generate_nfo" json:"generate_nfo"`       // Whether to generate NFO metadata files
-	DownloadImages bool   `yaml:"download_images" json:"download_images"` // Whether to download poster and backdrop artwork
+	APIKey         string `json:"api_key"`         // TMDB API key (v3 auth)
+	BaseURL        string `json:"base_url"`        // API base URL, customizable for reverse proxies
+	ImageBaseURL   string `json:"image_base_url"`  // Image CDN base URL
+	Language       string `json:"language"`        // Target language code, default zh-CN
+	Proxy          string `json:"proxy"`           // Optional HTTP/SOCKS5 proxy address
+	GenerateNFO    bool   `json:"generate_nfo"`    // Whether to generate NFO metadata files
+	DownloadImages bool   `json:"download_images"` // Whether to download poster and backdrop artwork
 }
 
 // ToInstanceConfig converts TMDBConfig to ScraperInstanceConfig.
@@ -140,11 +140,11 @@ func (s ScraperInstanceConfig) ToTMDBConfig() TMDBConfig {
 
 // LibraryConfig holds legacy media library directory and linking mode settings.
 type LibraryConfig struct {
-	MovieDir    string `yaml:"movie_dir" json:"movie_dir"`         // Root directory for movie library
-	TVDir       string `yaml:"tv_dir" json:"tv_dir"`               // Root directory for TV show library
-	AnimeDir    string `yaml:"anime_dir" json:"anime_dir"`         // Root directory for anime library
-	LinkMode    string `yaml:"link_mode" json:"link_mode"`         // Organize mode: hardlink (default), copy, move, symlink
-	MinFileSize int64  `yaml:"min_file_size" json:"min_file_size"` // Minimum file size in bytes for valid video files
+	MovieDir    string `json:"movie_dir"`     // Root directory for movie library
+	TVDir       string `json:"tv_dir"`        // Root directory for TV show library
+	AnimeDir    string `json:"anime_dir"`     // Root directory for anime library
+	LinkMode    string `json:"link_mode"`     // Organize mode: hardlink (default), copy, move, symlink
+	MinFileSize int64  `json:"min_file_size"` // Minimum file size in bytes for valid video files
 }
 
 // ToInstanceConfig converts LibraryConfig to OrganizerInstanceConfig.
@@ -176,9 +176,9 @@ func (o OrganizerInstanceConfig) ToLibraryConfig() LibraryConfig {
 
 // Config represents the system-wide global configuration composing SystemConfig and ComponentConfig.
 type Config struct {
-	SystemConfig    `yaml:",inline" json:"system"`
-	ComponentConfig `yaml:",inline" json:"component"`
+	SystemConfig    `json:"system"`
+	ComponentConfig `json:"component"`
 
-	TMDB    TMDBConfig    `yaml:"tmdb,omitempty" json:"tmdb,omitempty"`
-	Library LibraryConfig `yaml:"library,omitempty" json:"library,omitempty"`
+	TMDB    TMDBConfig    `json:"tmdb,omitempty"`
+	Library LibraryConfig `json:"library,omitempty"`
 }

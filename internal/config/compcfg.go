@@ -33,73 +33,73 @@ var ErrConfigNotFound = errors.New("no component configuration found in database
 
 // ComponentConfig holds dynamic pipeline and component configurations managed via API and stored in the database.
 type ComponentConfig struct {
-	Downloaders  []DownloaderComponentConfig `yaml:"downloaders" json:"downloaders"`
-	PathMappings []PathMapperInstanceConfig  `yaml:"path_mappings" json:"path_mappings"`
-	Parsers      []ParserInstanceConfig      `yaml:"parsers" json:"parsers"`
-	Scrapers     []ScraperInstanceConfig     `yaml:"scrapers" json:"scrapers"`
-	Organizers   []OrganizerInstanceConfig   `yaml:"organizers" json:"organizers"`
-	Plugins      PluginConfig                `yaml:"plugins" json:"plugins"`
+	Downloaders  []DownloaderComponentConfig `json:"downloaders"`
+	PathMappings []PathMapperInstanceConfig  `json:"path_mappings"`
+	Parsers      []ParserInstanceConfig      `json:"parsers"`
+	Scrapers     []ScraperInstanceConfig     `json:"scrapers"`
+	Organizers   []OrganizerInstanceConfig   `json:"organizers"`
+	Plugins      PluginConfig                `json:"plugins"`
 }
 
 // DownloaderComponentConfig represents configuration for an individual downloader instance component.
 type DownloaderComponentConfig struct {
-	Enabled     bool            `yaml:"enabled" json:"enabled"`         // Whether this downloader is enabled
-	ID          string          `yaml:"id" json:"id"`                   // Unique component ID, e.g. "downloader", "downloader:movie", "downloader:tv"
-	Type        string          `yaml:"type" json:"type"`               // Downloader type, e.g. "qbittorrent", "transmission"
-	Name        string          `yaml:"name" json:"name"`               // Friendly display name
-	Description string          `yaml:"description" json:"description"` // Friendly display description
-	Detail      json.RawMessage `yaml:"detail" json:"detail"`           // download-specific configuration
+	Enabled     bool            `json:"enabled"`     // Whether this downloader is enabled
+	ID          string          `json:"id"`          // Unique component ID, e.g. "downloader", "downloader:movie", "downloader:tv"
+	Type        string          `json:"type"`        // Downloader type, e.g. "qbittorrent", "transmission"
+	Name        string          `json:"name"`        // Friendly display name
+	Description string          `json:"description"` // Friendly display description
+	Detail      json.RawMessage `json:"detail"`      // Downloader-specific configuration
 }
 
 // PathMapperInstanceConfig maps paths between remote/docker and local environments.
 type PathMapperInstanceConfig struct {
-	Remote string `yaml:"remote" json:"remote"` // Remote or container internal path prefix
-	Local  string `yaml:"local" json:"local"`   // Local or host accessible path prefix
+	Remote string `json:"remote"` // Remote or container internal path prefix
+	Local  string `json:"local"`  // Local or host accessible path prefix
 }
 
 // ParserInstanceConfig represents configuration for an individual parser component.
 type ParserInstanceConfig struct {
-	ID                  string   `yaml:"id" json:"id"`                                       // Unique component ID, e.g. "parser", "parser:anime"
-	Name                string   `yaml:"name" json:"name"`                                   // Friendly display name
-	Enabled             bool     `yaml:"enabled" json:"enabled"`                             // Whether this parser instance is enabled
-	DefaultMediaType    string   `yaml:"default_media_type" json:"default_media_type"`       // Optional default fallback media type (movie/tv/anime)
-	CustomReleaseGroups []string `yaml:"custom_release_groups" json:"custom_release_groups"` // Optional additional release group identifiers
+	ID                  string   `json:"id"`                    // Unique component ID, e.g. "parser", "parser:anime"
+	Name                string   `json:"name"`                  // Friendly display name
+	Enabled             bool     `json:"enabled"`               // Whether this parser instance is enabled
+	DefaultMediaType    string   `json:"default_media_type"`    // Optional default fallback media type (movie/tv/anime)
+	CustomReleaseGroups []string `json:"custom_release_groups"` // Optional additional release group identifiers
 }
 
 // ScraperInstanceConfig represents configuration for an individual scraper component.
 type ScraperInstanceConfig struct {
-	ID             string `yaml:"id" json:"id"`                           // Unique component ID, e.g. "scraper", "scraper:tmdb-en"
-	Type           string `yaml:"type" json:"type"`                       // Scraper provider type, e.g. "tmdb"
-	Name           string `yaml:"name" json:"name"`                       // Friendly display name
-	Enabled        bool   `yaml:"enabled" json:"enabled"`                 // Whether this scraper instance is enabled
-	APIKey         string `yaml:"api_key" json:"api_key"`                 // API authentication key
-	BaseURL        string `yaml:"base_url" json:"base_url"`               // API base URL
-	ImageBaseURL   string `yaml:"image_base_url" json:"image_base_url"`   // Artwork CDN base URL
-	Language       string `yaml:"language" json:"language"`               // Preferred metadata language
-	Proxy          string `yaml:"proxy" json:"proxy"`                     // Optional proxy URL
-	GenerateNFO    bool   `yaml:"generate_nfo" json:"generate_nfo"`       // Whether to generate NFO metadata files
-	DownloadImages bool   `yaml:"download_images" json:"download_images"` // Whether to download poster and backdrop artwork
+	ID             string `json:"id"`              // Unique component ID, e.g. "scraper", "scraper:tmdb-en"
+	Type           string `json:"type"`            // Scraper provider type, e.g. "tmdb"
+	Name           string `json:"name"`            // Friendly display name
+	Enabled        bool   `json:"enabled"`         // Whether this scraper instance is enabled
+	APIKey         string `json:"api_key"`         // API authentication key
+	BaseURL        string `json:"base_url"`        // API base URL
+	ImageBaseURL   string `json:"image_base_url"`  // Artwork CDN base URL
+	Language       string `json:"language"`        // Preferred metadata language
+	Proxy          string `json:"proxy"`           // Optional proxy URL
+	GenerateNFO    bool   `json:"generate_nfo"`    // Whether to generate NFO metadata files
+	DownloadImages bool   `json:"download_images"` // Whether to download poster and backdrop artwork
 }
 
 // OrganizerInstanceConfig represents configuration for an individual organizer component.
 type OrganizerInstanceConfig struct {
-	ID             string `yaml:"id" json:"id"`                           // Unique component ID, e.g. "organizer", "organizer:movie"
-	Name           string `yaml:"name" json:"name"`                       // Friendly display name
-	Enabled        bool   `yaml:"enabled" json:"enabled"`                 // Whether this organizer instance is enabled
-	MovieDir       string `yaml:"movie_dir" json:"movie_dir"`             // Root directory for movie library
-	TVDir          string `yaml:"tv_dir" json:"tv_dir"`                   // Root directory for TV show library
-	AnimeDir       string `yaml:"anime_dir" json:"anime_dir"`             // Root directory for anime library
-	LinkMode       string `yaml:"link_mode" json:"link_mode"`             // hardlink, copy, move, symlink
-	MinFileSize    int64  `yaml:"min_file_size" json:"min_file_size"`     // Minimum file size in bytes for valid video files
-	GenerateNFO    bool   `yaml:"generate_nfo" json:"generate_nfo"`       // Whether to generate NFO files
-	DownloadImages bool   `yaml:"download_images" json:"download_images"` // Whether to download images
-	ScraperID      string `yaml:"scraper_id" json:"scraper_id"`           // Optional target scraper component ID
+	ID             string `json:"id"`              // Unique component ID, e.g. "organizer", "organizer:movie"
+	Name           string `json:"name"`            // Friendly display name
+	Enabled        bool   `json:"enabled"`         // Whether this organizer instance is enabled
+	MovieDir       string `json:"movie_dir"`       // Root directory for movie library
+	TVDir          string `json:"tv_dir"`          // Root directory for TV show library
+	AnimeDir       string `json:"anime_dir"`       // Root directory for anime library
+	LinkMode       string `json:"link_mode"`       // hardlink, copy, move, symlink
+	MinFileSize    int64  `json:"min_file_size"`   // Minimum file size in bytes for valid video files
+	GenerateNFO    bool   `json:"generate_nfo"`    // Whether to generate NFO files
+	DownloadImages bool   `json:"download_images"` // Whether to download images
+	ScraperID      string `json:"scraper_id"`      // Optional target scraper component ID
 }
 
 // PluginConfig holds global configuration for the plugin system.
 type PluginConfig struct {
-	Enabled bool                              `yaml:"enabled" json:"enabled"` // Whether the plugin system is enabled
-	Items   map[string]map[string]interface{} `yaml:"items" json:"items"`     // Custom configurations per plugin ID
+	Enabled bool                              `json:"enabled"` // Whether the plugin system is enabled
+	Items   map[string]map[string]interface{} `json:"items"`   // Custom configurations per plugin ID
 }
 
 // DefaultComponentConfig returns default component configuration.
@@ -157,7 +157,7 @@ func (c *ComponentConfig) GetOrganizerConfigs() []OrganizerInstanceConfig {
 	return make([]OrganizerInstanceConfig, 0)
 }
 
-// LoadComponentConfigFromFile loads component configuration from a specified YAML file path.
+// LoadComponentConfigFromFile loads component configuration from a specified JSON file path.
 func LoadComponentConfigFromFile(path string) (*ComponentConfig, error) {
 	cfg := DefaultComponentConfig()
 
@@ -172,7 +172,7 @@ func LoadComponentConfigFromFile(path string) (*ComponentConfig, error) {
 	return cfg, nil
 }
 
-// SaveComponentConfigToFile writes component configuration to a YAML file.
+// SaveComponentConfigToFile writes component configuration to a JSON file.
 func SaveComponentConfigToFile(path string, cfg *ComponentConfig) error {
 	if cfg == nil {
 		return errors.New("component config is nil")

@@ -8,10 +8,11 @@ import (
 	"github.com/jackie8tao/mediahelper/internal/downloader"
 )
 
+// Config holds connection parameters for a qBittorrent client instance.
 type Config struct {
-	Addr     string
-	Username string
-	Password string
+	Addr     string `json:"addr"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 // Client wraps autobrr/go-qbittorrent and implements downloader.Downloader.

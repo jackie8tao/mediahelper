@@ -1,0 +1,83 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 9090
+  },
+  "database": {
+    "dsn": "data/mediahelper.db"
+  },
+  "downloaders": [
+    {
+      "id": "downloader:qbt-main",
+      "type": "qbittorrent",
+      "name": "主 qBittorrent",
+      "description": "主力 qBittorrent 下载器实例",
+      "enabled": true,
+      "detail": {
+        "addr": "http://127.0.0.1:8080",
+        "username": "admin",
+        "password": "adminadmin"
+      }
+    }
+  ],
+  "path_mappings": [
+    {
+      "remote": "/downloads",
+      "local": "D:/Downloads"
+    }
+  ],
+  "parsers": [
+    {
+      "id": "parser:movie",
+      "name": "电影解析器",
+      "enabled": true,
+      "default_media_type": "movie",
+      "custom_release_groups": []
+    }
+  ],
+  "scrapers": [
+    {
+      "id": "scraper:tmdb-zh",
+      "type": "tmdb",
+      "name": "TMDB 中文刮削",
+      "enabled": true,
+      "api_key": "your_tmdb_api_key_here",
+      "base_url": "https://api.themoviedb.org/3",
+      "image_base_url": "https://image.tmdb.org/t/p/original",
+      "language": "zh-CN",
+      "proxy": "",
+      "generate_nfo": true,
+      "download_images": true
+    }
+  ],
+  "organizers": [
+    {
+      "id": "organizer:default",
+      "name": "默认媒体库整理归档",
+      "enabled": true,
+      "movie_dir": "D:/Media/Movies",
+      "tv_dir": "D:/Media/TV",
+      "anime_dir": "D:/Media/Anime",
+      "link_mode": "hardlink",
+      "min_file_size": 52428800,
+      "generate_nfo": true,
+      "download_images": true,
+      "scraper_id": "scraper:tmdb-zh"
+    }
+  ],
+  "plugins": {
+    "enabled": true,
+    "items": {
+      "jellyfin_refresh": {
+        "enabled": false,
+        "server_url": "http://127.0.0.1:8096",
+        "api_key": "your_jellyfin_api_key_here"
+      },
+      "webhook_notify": {
+        "enabled": false,
+        "webhook_url": "https://your-webhook-endpoint.com/api"
+      }
+    }
+  }
+}
+
