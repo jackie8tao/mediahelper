@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/jackie8tao/mediahelper/internal/config"
-	"github.com/jackie8tao/mediahelper/internal/downloader"
 	"github.com/jackie8tao/mediahelper/internal/pipeline"
 )
 
@@ -81,22 +80,8 @@ func (c *ParserComponent) resolveRawInput(sCtx *pipeline.StepContext) string {
 		}
 	}
 
-	// 3. Torrent object in parameters
-	if sCtx.Params != nil {
-		if tRaw, ok := sCtx.Params["torrent"]; ok {
-			if t, ok := tRaw.(downloader.Torrent); ok && t.Name != "" {
-				return t.Name
-			}
-		}
-	}
-
-	// 4. Event payload extraction
+	// 3. Event payload extraction
 	if sCtx.Event != nil {
-		if tRaw, ok := sCtx.Event["torrent"]; ok {
-			if t, ok := tRaw.(downloader.Torrent); ok && t.Name != "" {
-				return t.Name
-			}
-		}
 		for _, key := range []string{"raw", "title", "name"} {
 			if val, ok := sCtx.Event[key].(string); ok && val != "" {
 				return val
@@ -109,14 +94,9 @@ func (c *ParserComponent) resolveRawInput(sCtx *pipeline.StepContext) string {
 		}
 	}
 
-	// 5. Upstream steps extraction
+	// 4. Upstream steps extraction
 	if sCtx.Steps != nil {
 		for _, stepOutputs := range sCtx.Steps {
-			if tRaw, ok := stepOutputs["torrent"]; ok {
-				if t, ok := tRaw.(downloader.Torrent); ok && t.Name != "" {
-					return t.Name
-				}
-			}
 			for _, key := range []string{"local_content_path", "local_path", "content_path", "path"} {
 				if val, ok := stepOutputs[key].(string); ok && val != "" {
 					return filepath.Base(val)
