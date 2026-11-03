@@ -34,7 +34,7 @@ type ComponentConfig struct {
 	Downloaders []DownloaderComponentConfig `json:"downloaders"`
 	Parsers     []ParserComponentConfig     `json:"parsers"`
 	Scrapers    []ScraperComponentConfig    `json:"scrapers"`
-	Organizers  []OrganizerInstanceConfig   `json:"organizers"`
+	Organizers  []OrganizerComponentConfig  `json:"organizers"`
 	Plugins     PluginConfig                `json:"plugins"`
 }
 
@@ -68,19 +68,14 @@ type ScraperComponentConfig struct {
 	Detail      json.RawMessage `json:"detail"`      // Scraper-specific configuration
 }
 
-// OrganizerInstanceConfig represents configuration for an individual organizer component.
-type OrganizerInstanceConfig struct {
-	ID             string `json:"id"`              // Unique component ID, e.g. "organizer", "organizer:movie"
-	Name           string `json:"name"`            // Friendly display name
-	Enabled        bool   `json:"enabled"`         // Whether this organizer instance is enabled
-	MovieDir       string `json:"movie_dir"`       // Root directory for movie library
-	TVDir          string `json:"tv_dir"`          // Root directory for TV show library
-	AnimeDir       string `json:"anime_dir"`       // Root directory for anime library
-	LinkMode       string `json:"link_mode"`       // hardlink, copy, move, symlink
-	MinFileSize    int64  `json:"min_file_size"`   // Minimum file size in bytes for valid video files
-	GenerateNFO    bool   `json:"generate_nfo"`    // Whether to generate NFO files
-	DownloadImages bool   `json:"download_images"` // Whether to download images
-	ScraperID      string `json:"scraper_id"`      // Optional target scraper component ID
+// OrganizerComponentConfig represents configuration for an individual organizer instance component.
+type OrganizerComponentConfig struct {
+	Enabled     bool            `json:"enabled"`     // Whether this organizer instance is enabled
+	ID          string          `json:"id"`          // Unique component ID, e.g. "organizer", "organizer:movie", "organizer:tv"
+	Type        string          `json:"type"`        // Organizer type, e.g. "local"
+	Name        string          `json:"name"`        // Friendly display name
+	Description string          `json:"description"` // Friendly display description
+	Detail      json.RawMessage `json:"detail"`      // Organizer-specific configuration
 }
 
 // PluginConfig holds global configuration for the plugin system.
@@ -95,7 +90,7 @@ func DefaultComponentConfig() *ComponentConfig {
 		Downloaders: make([]DownloaderComponentConfig, 0),
 		Parsers:     make([]ParserComponentConfig, 0),
 		Scrapers:    make([]ScraperComponentConfig, 0),
-		Organizers:  make([]OrganizerInstanceConfig, 0),
+		Organizers:  make([]OrganizerComponentConfig, 0),
 		Plugins: PluginConfig{
 			Enabled: true,
 			Items:   make(map[string]map[string]interface{}),
@@ -128,11 +123,11 @@ func (c *ComponentConfig) GetScraperConfigs() []ScraperComponentConfig {
 }
 
 // GetOrganizerConfigs returns all configured organizer instances.
-func (c *ComponentConfig) GetOrganizerConfigs() []OrganizerInstanceConfig {
+func (c *ComponentConfig) GetOrganizerConfigs() []OrganizerComponentConfig {
 	if len(c.Organizers) > 0 {
 		return c.Organizers
 	}
-	return make([]OrganizerInstanceConfig, 0)
+	return make([]OrganizerComponentConfig, 0)
 }
 
 // LoadComponentConfigFromFile loads component configuration from a specified JSON file path.

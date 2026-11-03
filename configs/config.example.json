@@ -49,16 +49,17 @@
   "organizers": [
     {
       "id": "organizer:default",
+      "type": "local",
       "name": "默认媒体库整理归档",
+      "description": "本地媒体库硬链接整理组件",
       "enabled": true,
-      "movie_dir": "D:/Media/Movies",
-      "tv_dir": "D:/Media/TV",
-      "anime_dir": "D:/Media/Anime",
-      "link_mode": "hardlink",
-      "min_file_size": 52428800,
-      "generate_nfo": true,
-      "download_images": true,
-      "scraper_id": "scraper:tmdb-zh"
+      "detail": {
+        "movie_dir": "D:/Media/Movies",
+        "tv_dir": "D:/Media/TV",
+        "anime_dir": "D:/Media/Anime",
+        "link_mode": "hardlink",
+        "min_file_size": 52428800
+      }
     }
   ],
   "plugins": {
