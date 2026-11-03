@@ -33,7 +33,7 @@ var ErrConfigNotFound = errors.New("no component configuration found in database
 type ComponentConfig struct {
 	Downloaders []DownloaderComponentConfig `json:"downloaders"`
 	Parsers     []ParserComponentConfig     `json:"parsers"`
-	Scrapers    []ScraperInstanceConfig     `json:"scrapers"`
+	Scrapers    []ScraperComponentConfig    `json:"scrapers"`
 	Organizers  []OrganizerInstanceConfig   `json:"organizers"`
 	Plugins     PluginConfig                `json:"plugins"`
 }
@@ -58,19 +58,14 @@ type ParserComponentConfig struct {
 	Detail      json.RawMessage `json:"detail"`      // Parser-specific configuration
 }
 
-// ScraperInstanceConfig represents configuration for an individual scraper component.
-type ScraperInstanceConfig struct {
-	ID             string `json:"id"`              // Unique component ID, e.g. "scraper", "scraper:tmdb-en"
-	Type           string `json:"type"`            // Scraper provider type, e.g. "tmdb"
-	Name           string `json:"name"`            // Friendly display name
-	Enabled        bool   `json:"enabled"`         // Whether this scraper instance is enabled
-	APIKey         string `json:"api_key"`         // API authentication key
-	BaseURL        string `json:"base_url"`        // API base URL
-	ImageBaseURL   string `json:"image_base_url"`  // Artwork CDN base URL
-	Language       string `json:"language"`        // Preferred metadata language
-	Proxy          string `json:"proxy"`           // Optional proxy URL
-	GenerateNFO    bool   `json:"generate_nfo"`    // Whether to generate NFO metadata files
-	DownloadImages bool   `json:"download_images"` // Whether to download poster and backdrop artwork
+// ScraperComponentConfig represents configuration for an individual scraper instance component.
+type ScraperComponentConfig struct {
+	Enabled     bool            `json:"enabled"`     // Whether this scraper instance is enabled
+	ID          string          `json:"id"`          // Unique component ID, e.g. "scraper", "scraper:tmdb-zh", "scraper:tmdb-en"
+	Type        string          `json:"type"`        // Scraper provider type, e.g. "tmdb"
+	Name        string          `json:"name"`        // Friendly display name
+	Description string          `json:"description"` // Friendly display description
+	Detail      json.RawMessage `json:"detail"`      // Scraper-specific configuration
 }
 
 // OrganizerInstanceConfig represents configuration for an individual organizer component.
@@ -99,7 +94,7 @@ func DefaultComponentConfig() *ComponentConfig {
 	return &ComponentConfig{
 		Downloaders: make([]DownloaderComponentConfig, 0),
 		Parsers:     make([]ParserComponentConfig, 0),
-		Scrapers:    make([]ScraperInstanceConfig, 0),
+		Scrapers:    make([]ScraperComponentConfig, 0),
 		Organizers:  make([]OrganizerInstanceConfig, 0),
 		Plugins: PluginConfig{
 			Enabled: true,
@@ -125,11 +120,11 @@ func (c *ComponentConfig) GetParserConfigs() []ParserComponentConfig {
 }
 
 // GetScraperConfigs returns all configured scraper instances.
-func (c *ComponentConfig) GetScraperConfigs() []ScraperInstanceConfig {
+func (c *ComponentConfig) GetScraperConfigs() []ScraperComponentConfig {
 	if len(c.Scrapers) > 0 {
 		return c.Scrapers
 	}
-	return make([]ScraperInstanceConfig, 0)
+	return make([]ScraperComponentConfig, 0)
 }
 
 // GetOrganizerConfigs returns all configured organizer instances.

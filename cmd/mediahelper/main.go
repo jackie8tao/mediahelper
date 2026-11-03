@@ -36,6 +36,7 @@ import (
 	"github.com/jackie8tao/mediahelper/plugins/notify"
 
 	_ "github.com/jackie8tao/mediahelper/internal/downloader/qbittorrent"
+	_ "github.com/jackie8tao/mediahelper/internal/scraper/tmdb"
 )
 
 func main() {

@@ -11,7 +11,6 @@ import (
 	"github.com/jackie8tao/mediahelper/internal/config"
 	"github.com/jackie8tao/mediahelper/internal/parser"
 	"github.com/jackie8tao/mediahelper/internal/scraper"
-	"github.com/jackie8tao/mediahelper/internal/scraper/nfo"
 )
 
 var (
@@ -33,8 +32,6 @@ type Organizer struct {
 // NewOrganizer 创建整理引擎实例 (向下兼容全局配置)
 func NewOrganizer(cfg config.Config, scraperSvc scraper.Scraper) *Organizer {
 	instCfg := cfg.Library.ToInstanceConfig("organizer")
-	instCfg.GenerateNFO = cfg.TMDB.GenerateNFO
-	instCfg.DownloadImages = cfg.TMDB.DownloadImages
 	return NewOrganizerFromInstance(instCfg, scraperSvc)
 }
 
@@ -145,18 +142,6 @@ func (o *Organizer) Organize(ctx context.Context, task OrganizeTask) (*OrganizeR
 		// 伴生字幕处理
 		o.transferSubtitles(mainVideo, targetFilePath, linkMode, result)
 
-		// 写入 movie.nfo
-		if o.cfg.GenerateNFO {
-			nfoPath := filepath.Join(movieDir, "movie.nfo")
-			if nfoData, err := nfo.GenerateMovieNFO(meta); err == nil {
-				_ = os.WriteFile(nfoPath, nfoData, 0644)
-				result.NFOPath = nfoPath
-			}
-		}
-
-		// 下载海报与背景图
-		o.downloadImages(ctx, meta, movieDir, result)
-
 	} else {
 		// === 电视剧 / 动漫整理 ===
 		showDir := filepath.Join(baseTargetDir, titleYear)
@@ -209,30 +194,7 @@ func (o *Organizer) Organize(ctx context.Context, task OrganizeTask) (*OrganizeR
 
 			// 伴生字幕处理
 			o.transferSubtitles(vFile, targetFilePath, linkMode, result)
-
-			// 生成单集 NFO
-			if o.cfg.GenerateNFO && episode > 0 {
-				epNFOPath := strings.TrimSuffix(targetFilePath, ext) + ".nfo"
-				epMeta := *meta
-				epMeta.Season = season
-				epMeta.Episode = episode
-				if nfoData, err := nfo.GenerateEpisodeNFO(&epMeta); err == nil {
-					_ = os.WriteFile(epNFOPath, nfoData, 0644)
-				}
-			}
 		}
-
-		// 写入剧集主 tvshow.nfo
-		if o.cfg.GenerateNFO {
-			tvNFOPath := filepath.Join(showDir, "tvshow.nfo")
-			if nfoData, err := nfo.GenerateTVShowNFO(meta); err == nil {
-				_ = os.WriteFile(tvNFOPath, nfoData, 0644)
-				result.NFOPath = tvNFOPath
-			}
-		}
-
-		// 下载剧集海报与背景图
-		o.downloadImages(ctx, meta, showDir, result)
 	}
 
 	result.Success = len(result.LinkedFiles) > 0
@@ -339,33 +301,6 @@ func (o *Organizer) transferSubtitles(srcVideo, dstVideo string, mode LinkMode, 
 					Source: srcSubPath,
 					Target: targetSub,
 				})
-			}
-		}
-	}
-}
-
-// downloadImages 下载海报与背景图
-func (o *Organizer) downloadImages(ctx context.Context, meta *scraper.MediaMetadata, targetDir string, result *OrganizeResult) {
-	if !o.cfg.DownloadImages || o.scraperSvc == nil {
-		return
-	}
-
-	// 1. 海报 (poster.jpg)
-	if meta.PosterURL != "" {
-		posterPath := filepath.Join(targetDir, "poster.jpg")
-		if _, err := os.Stat(posterPath); os.IsNotExist(err) {
-			if err := o.scraperSvc.DownloadImage(ctx, meta.PosterURL, posterPath); err == nil {
-				result.PosterPath = posterPath
-			}
-		}
-	}
-
-	// 2. 背景图 (fanart.jpg)
-	if meta.BackdropURL != "" {
-		fanartPath := filepath.Join(targetDir, "fanart.jpg")
-		if _, err := os.Stat(fanartPath); os.IsNotExist(err) {
-			if err := o.scraperSvc.DownloadImage(ctx, meta.BackdropURL, fanartPath); err == nil {
-				result.FanartPath = fanartPath
 			}
 		}
 	}

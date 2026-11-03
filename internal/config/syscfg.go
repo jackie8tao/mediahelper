@@ -93,48 +93,6 @@ func SaveSystemConfigToFile(path string, cfg *SystemConfig) error {
 // Combined Config & Backward Compatibility
 // ============================================================================
 
-// TMDBConfig holds legacy TheMovieDatabase scraping configuration.
-type TMDBConfig struct {
-	APIKey         string `json:"api_key"`         // TMDB API key (v3 auth)
-	BaseURL        string `json:"base_url"`        // API base URL, customizable for reverse proxies
-	ImageBaseURL   string `json:"image_base_url"`  // Image CDN base URL
-	Language       string `json:"language"`        // Target language code, default zh-CN
-	Proxy          string `json:"proxy"`           // Optional HTTP/SOCKS5 proxy address
-	GenerateNFO    bool   `json:"generate_nfo"`    // Whether to generate NFO metadata files
-	DownloadImages bool   `json:"download_images"` // Whether to download poster and backdrop artwork
-}
-
-// ToInstanceConfig converts TMDBConfig to ScraperInstanceConfig.
-func (t TMDBConfig) ToInstanceConfig(defaultID string) ScraperInstanceConfig {
-	id := defaultID
-	return ScraperInstanceConfig{
-		ID:             id,
-		Type:           "tmdb",
-		Name:           "TMDB",
-		Enabled:        t.APIKey != "",
-		APIKey:         t.APIKey,
-		BaseURL:        t.BaseURL,
-		ImageBaseURL:   t.ImageBaseURL,
-		Language:       t.Language,
-		Proxy:          t.Proxy,
-		GenerateNFO:    t.GenerateNFO,
-		DownloadImages: t.DownloadImages,
-	}
-}
-
-// ToTMDBConfig converts ScraperInstanceConfig to TMDBConfig.
-func (s ScraperInstanceConfig) ToTMDBConfig() TMDBConfig {
-	return TMDBConfig{
-		APIKey:         s.APIKey,
-		BaseURL:        s.BaseURL,
-		ImageBaseURL:   s.ImageBaseURL,
-		Language:       s.Language,
-		Proxy:          s.Proxy,
-		GenerateNFO:    s.GenerateNFO,
-		DownloadImages: s.DownloadImages,
-	}
-}
-
 // LibraryConfig holds legacy media library directory and linking mode settings.
 type LibraryConfig struct {
 	MovieDir    string `json:"movie_dir"`     // Root directory for movie library
@@ -176,6 +134,5 @@ type Config struct {
 	SystemConfig    `json:"system"`
 	ComponentConfig `json:"component"`
 
-	TMDB    TMDBConfig    `json:"tmdb,omitempty"`
 	Library LibraryConfig `json:"library,omitempty"`
 }
