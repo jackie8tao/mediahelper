@@ -61,20 +61,6 @@
         "min_file_size": 52428800
       }
     }
-  ],
-  "plugins": {
-    "enabled": true,
-    "items": {
-      "jellyfin_refresh": {
-        "enabled": false,
-        "server_url": "http://127.0.0.1:8096",
-        "api_key": "your_jellyfin_api_key_here"
-      },
-      "webhook_notify": {
-        "enabled": false,
-        "webhook_url": "https://your-webhook-endpoint.com/api"
-      }
-    }
-  }
+  ]
 }
 

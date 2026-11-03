@@ -12,7 +12,6 @@ import (
 	_ "github.com/jackie8tao/mediahelper/docs"
 	"github.com/jackie8tao/mediahelper/internal/config"
 	"github.com/jackie8tao/mediahelper/internal/pipeline"
-	"github.com/jackie8tao/mediahelper/internal/plugin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -22,13 +21,12 @@ type Server struct {
 	cfg          *config.SystemConfig
 	engine       *pipeline.Engine
 	compRegistry *pipeline.ComponentRegistry
-	pluginMgr    *plugin.Manager
 	router       *gin.Engine
 	httpServer   *http.Server
 }
 
 // New creates a new Server instance.
-func New(cfg *config.SystemConfig, engine *pipeline.Engine, compRegistry *pipeline.ComponentRegistry, pluginMgr *plugin.Manager) *Server {
+func New(cfg *config.SystemConfig, engine *pipeline.Engine, compRegistry *pipeline.ComponentRegistry) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	router.Use(gin.Recovery())
@@ -41,7 +39,6 @@ func New(cfg *config.SystemConfig, engine *pipeline.Engine, compRegistry *pipeli
 		cfg:          cfg,
 		engine:       engine,
 		compRegistry: compRegistry,
-		pluginMgr:    pluginMgr,
 		router:       router,
 	}
 
@@ -58,7 +55,6 @@ func (s *Server) setupRoutes() {
 	{
 		v1.GET("/status", s.handleStatus)
 		v1.GET("/history", s.handleHistory)
-		v1.GET("/plugins", s.handlePlugins)
 		v1.POST("/webhook/qbittorrent", s.handleQBWebhook)
 
 		// Pipeline management endpoints
@@ -167,27 +163,6 @@ func (s *Server) handleHistory(c *gin.Context) {
 		"code":  0,
 		"total": total,
 		"data":  executions,
-	})
-}
-
-// handlePlugins returns loaded plugin information.
-// @Summary List Plugins
-// @Description Returns information on all registered plugins and their enabled status
-// @Tags Plugins
-// @Produce json
-// @Success 200 {object} map[string]interface{}
-// @Router /api/v1/plugins [get]
-func (s *Server) handlePlugins(c *gin.Context) {
-	var list []interface{}
-	if s.pluginMgr != nil {
-		for _, info := range s.pluginMgr.ListPlugins() {
-			list = append(list, info)
-		}
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"code":  0,
-		"total": len(list),
-		"data":  list,
 	})
 }
 

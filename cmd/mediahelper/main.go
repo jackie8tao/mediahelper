@@ -29,11 +29,8 @@ import (
 	"github.com/jackie8tao/mediahelper/internal/organizer"
 	"github.com/jackie8tao/mediahelper/internal/parser"
 	"github.com/jackie8tao/mediahelper/internal/pipeline"
-	"github.com/jackie8tao/mediahelper/internal/plugin"
 	"github.com/jackie8tao/mediahelper/internal/scraper"
 	"github.com/jackie8tao/mediahelper/internal/server"
-	"github.com/jackie8tao/mediahelper/plugins/jellyfin"
-	"github.com/jackie8tao/mediahelper/plugins/notify"
 
 	_ "github.com/jackie8tao/mediahelper/internal/downloader/qbittorrent"
 	_ "github.com/jackie8tao/mediahelper/internal/scraper/tmdb"
@@ -87,19 +84,7 @@ func main() {
 		slog.Error("Failed to register organizer components", "error", err)
 	}
 
-	// 5. Initialize plugin manager and load plugins
-	pluginMgr := plugin.NewManager()
-	_ = pluginMgr.Register(jellyfin.New())
-	_ = pluginMgr.Register(notify.New())
-
-	initPluginCtx, cancelInitPlugin := context.WithTimeout(context.Background(), 10*time.Second)
-	if err := pluginMgr.InitAll(initPluginCtx, compCfg.Plugins); err != nil {
-		slog.Error("Failed to initialize plugins", "error", err)
-	}
-	cancelInitPlugin()
-	_ = pluginMgr.StartAll(context.Background())
-
-	// 6. Start pipeline engine (seed default pipelines, self-healing recovery, and cron scheduling)
+	// 5. Start pipeline engine (seed default pipelines, self-healing recovery, and cron scheduling)
 	pipelineEngine := pipeline.NewEngine(db, compRegistry)
 	if err := pipeline.SeedDefaultPipelines(context.Background(), pipelineEngine.Repo()); err != nil {
 		slog.Warn("Failed to seed default pipelines", "error", err)
@@ -108,8 +93,8 @@ func main() {
 		slog.Error("Failed to start pipeline engine", "error", err)
 	}
 
-	// 7. Start HTTP API & Webhook web server
-	srv := server.New(sysCfg, pipelineEngine, compRegistry, pluginMgr)
+	// 6. Start HTTP API & Webhook web server
+	srv := server.New(sysCfg, pipelineEngine, compRegistry)
 	go func() {
 		if err := srv.Start(); err != nil {
 			slog.Error("HTTP Server failed to start", "error", err)
@@ -118,7 +103,7 @@ func main() {
 
 	slog.Info("MediaHelper running successfully", "port", sysCfg.Server.Port)
 
-	// 8. Listen for system termination signals for graceful shutdown
+	// 7. Listen for system termination signals for graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -136,9 +121,6 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("HTTP Server forced to shutdown", "error", err)
 	}
-
-	// Stop all plugins
-	_ = pluginMgr.StopAll(shutdownCtx)
 
 	slog.Info("MediaHelper exited cleanly")
 }

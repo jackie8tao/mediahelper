@@ -19,7 +19,6 @@ const (
 	SectionParsers     = "parsers"
 	SectionScrapers    = "scrapers"
 	SectionOrganizers  = "organizers"
-	SectionPlugins     = "plugins"
 )
 
 // ErrConfigNotFound indicates no component configuration was found in the database.
@@ -35,7 +34,6 @@ type ComponentConfig struct {
 	Parsers     []ParserComponentConfig     `json:"parsers"`
 	Scrapers    []ScraperComponentConfig    `json:"scrapers"`
 	Organizers  []OrganizerComponentConfig  `json:"organizers"`
-	Plugins     PluginConfig                `json:"plugins"`
 }
 
 // DownloaderComponentConfig represents configuration for an individual downloader instance component.
@@ -78,12 +76,6 @@ type OrganizerComponentConfig struct {
 	Detail      json.RawMessage `json:"detail"`      // Organizer-specific configuration
 }
 
-// PluginConfig holds global configuration for the plugin system.
-type PluginConfig struct {
-	Enabled bool                              `json:"enabled"` // Whether the plugin system is enabled
-	Items   map[string]map[string]interface{} `json:"items"`   // Custom configurations per plugin ID
-}
-
 // DefaultComponentConfig returns default component configuration.
 func DefaultComponentConfig() *ComponentConfig {
 	return &ComponentConfig{
@@ -91,10 +83,6 @@ func DefaultComponentConfig() *ComponentConfig {
 		Parsers:     make([]ParserComponentConfig, 0),
 		Scrapers:    make([]ScraperComponentConfig, 0),
 		Organizers:  make([]OrganizerComponentConfig, 0),
-		Plugins: PluginConfig{
-			Enabled: true,
-			Items:   make(map[string]map[string]interface{}),
-		},
 	}
 }
 
@@ -197,7 +185,6 @@ func LoadComponentConfigFromDB(db *gorm.DB) (*ComponentConfig, error) {
 		SectionParsers,
 		SectionScrapers,
 		SectionOrganizers,
-		SectionPlugins,
 	}
 	hasSection := false
 	for _, sec := range componentSections {
@@ -233,11 +220,6 @@ func LoadComponentConfigFromDB(db *gorm.DB) (*ComponentConfig, error) {
 			return nil, fmt.Errorf("unmarshal organizers error: %w", err)
 		}
 	}
-	if val, ok := settingsMap[SectionPlugins]; ok && strings.TrimSpace(val) != "" {
-		if err := json.Unmarshal([]byte(val), &cfg.Plugins); err != nil {
-			return nil, fmt.Errorf("unmarshal plugins error: %w", err)
-		}
-	}
 
 	return cfg, nil
 }
@@ -261,7 +243,6 @@ func SaveComponentConfigToDB(db *gorm.DB, cfg *ComponentConfig) error {
 		{SectionParsers, "component", "Parser component instances configuration", cfg.Parsers},
 		{SectionScrapers, "component", "Scraper component instances configuration", cfg.Scrapers},
 		{SectionOrganizers, "component", "Organizer component instances configuration", cfg.Organizers},
-		{SectionPlugins, "component", "Plugin system configuration", cfg.Plugins},
 	}
 
 	now := time.Now()
