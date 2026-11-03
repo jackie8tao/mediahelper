@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/jackie8tao/mediahelper/docs"
 	"github.com/jackie8tao/mediahelper/internal/config"
-	"github.com/jackie8tao/mediahelper/internal/pathmapper"
 	"github.com/jackie8tao/mediahelper/internal/pipeline"
 	"github.com/jackie8tao/mediahelper/internal/plugin"
 	swaggerFiles "github.com/swaggo/files"
@@ -24,7 +23,6 @@ type Server struct {
 	engine       *pipeline.Engine
 	compRegistry *pipeline.ComponentRegistry
 	pluginMgr    *plugin.Manager
-	pathMapper   *pathmapper.PathMapper
 	router       *gin.Engine
 	httpServer   *http.Server
 }

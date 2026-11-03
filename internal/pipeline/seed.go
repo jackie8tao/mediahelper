@@ -23,7 +23,7 @@ func SeedDefaultPipelines(ctx context.Context, repo *Repository) error {
 
 	defaultPipeline := &database.Pipeline{
 		Name:        "Default Media Organizer",
-		Description: "Automated media workflow: Path Mapping -> Title Parsing -> TMDB Scraping -> Media Library Organizing -> Downloader Tagging",
+		Description: "Automated media workflow: Title Parsing -> TMDB Scraping -> Media Library Organizing -> Downloader Tagging",
 		Enabled:     true,
 		Triggers: []database.TriggerConfig{
 			{
@@ -36,11 +36,6 @@ func SeedDefaultPipelines(ctx context.Context, repo *Repository) error {
 			},
 		},
 		Steps: []database.StepConfig{
-			{
-				ID:        "path_mapping",
-				Name:      "Map Download Paths",
-				Component: "path_mapper",
-			},
 			{
 				ID:        "parser",
 				Name:      "Parse Media Title",

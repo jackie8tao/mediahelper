@@ -28,7 +28,6 @@ import (
 	"github.com/jackie8tao/mediahelper/internal/downloader"
 	"github.com/jackie8tao/mediahelper/internal/organizer"
 	"github.com/jackie8tao/mediahelper/internal/parser"
-	"github.com/jackie8tao/mediahelper/internal/pathmapper"
 	"github.com/jackie8tao/mediahelper/internal/pipeline"
 	"github.com/jackie8tao/mediahelper/internal/plugin"
 	"github.com/jackie8tao/mediahelper/internal/scraper"
@@ -74,9 +73,6 @@ func main() {
 
 	// 4. Initialize pipeline component registry and register components
 	compRegistry := pipeline.NewComponentRegistry()
-	if _, err := pathmapper.RegisterComponent(compCfg, compRegistry); err != nil {
-		slog.Error("Failed to register path mapper component", "error", err)
-	}
 	if _, err := downloader.RegisterComponents(compCfg, compRegistry); err != nil {
 		slog.Error("Failed to register downloader components", "error", err)
 	}

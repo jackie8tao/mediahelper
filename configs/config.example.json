@@ -20,12 +20,6 @@
       }
     }
   ],
-  "path_mappings": [
-    {
-      "remote": "/downloads",
-      "local": "D:/Downloads"
-    }
-  ],
   "parsers": [
     {
       "id": "parser:openai",

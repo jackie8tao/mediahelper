@@ -15,13 +15,11 @@ import (
 
 // Section key constants for structured configuration modules
 const (
-	SectionDownloaders  = "downloaders"
-	SectionPathMappings = "path_mappings"
-	SectionPathMappers  = "pathmappers" // alias for backwards compatibility
-	SectionParsers      = "parsers"
-	SectionScrapers     = "scrapers"
-	SectionOrganizers   = "organizers"
-	SectionPlugins      = "plugins"
+	SectionDownloaders = "downloaders"
+	SectionParsers     = "parsers"
+	SectionScrapers    = "scrapers"
+	SectionOrganizers  = "organizers"
+	SectionPlugins     = "plugins"
 )
 
 // ErrConfigNotFound indicates no component configuration was found in the database.
@@ -33,12 +31,11 @@ var ErrConfigNotFound = errors.New("no component configuration found in database
 
 // ComponentConfig holds dynamic pipeline and component configurations managed via API and stored in the database.
 type ComponentConfig struct {
-	Downloaders  []DownloaderComponentConfig `json:"downloaders"`
-	PathMappings []PathMapperInstanceConfig  `json:"path_mappings"`
-	Parsers      []ParserComponentConfig     `json:"parsers"`
-	Scrapers     []ScraperInstanceConfig     `json:"scrapers"`
-	Organizers   []OrganizerInstanceConfig   `json:"organizers"`
-	Plugins      PluginConfig                `json:"plugins"`
+	Downloaders []DownloaderComponentConfig `json:"downloaders"`
+	Parsers     []ParserComponentConfig     `json:"parsers"`
+	Scrapers    []ScraperInstanceConfig     `json:"scrapers"`
+	Organizers  []OrganizerInstanceConfig   `json:"organizers"`
+	Plugins     PluginConfig                `json:"plugins"`
 }
 
 // DownloaderComponentConfig represents configuration for an individual downloader instance component.
@@ -49,12 +46,6 @@ type DownloaderComponentConfig struct {
 	Name        string          `json:"name"`        // Friendly display name
 	Description string          `json:"description"` // Friendly display description
 	Detail      json.RawMessage `json:"detail"`      // Downloader-specific configuration
-}
-
-// PathMapperInstanceConfig maps paths between remote/docker and local environments.
-type PathMapperInstanceConfig struct {
-	Remote string `json:"remote"` // Remote or container internal path prefix
-	Local  string `json:"local"`  // Local or host accessible path prefix
 }
 
 // ParserComponentConfig represents configuration for an individual AIGC parser instance component.
@@ -106,11 +97,10 @@ type PluginConfig struct {
 // DefaultComponentConfig returns default component configuration.
 func DefaultComponentConfig() *ComponentConfig {
 	return &ComponentConfig{
-		Downloaders:  make([]DownloaderComponentConfig, 0),
-		PathMappings: make([]PathMapperInstanceConfig, 0),
-		Parsers:      make([]ParserComponentConfig, 0),
-		Scrapers:     make([]ScraperInstanceConfig, 0),
-		Organizers:   make([]OrganizerInstanceConfig, 0),
+		Downloaders: make([]DownloaderComponentConfig, 0),
+		Parsers:     make([]ParserComponentConfig, 0),
+		Scrapers:    make([]ScraperInstanceConfig, 0),
+		Organizers:  make([]OrganizerInstanceConfig, 0),
 		Plugins: PluginConfig{
 			Enabled: true,
 			Items:   make(map[string]map[string]interface{}),
@@ -124,14 +114,6 @@ func (c *ComponentConfig) GetDownloaderConfigs() []DownloaderComponentConfig {
 		return c.Downloaders
 	}
 	return make([]DownloaderComponentConfig, 0)
-}
-
-// GetPathMappings returns global directory path mappings.
-func (c *ComponentConfig) GetPathMappings() []PathMapperInstanceConfig {
-	if len(c.PathMappings) > 0 {
-		return c.PathMappings
-	}
-	return make([]PathMapperInstanceConfig, 0)
 }
 
 // GetParserConfigs returns all configured parser instances.
@@ -222,8 +204,6 @@ func LoadComponentConfigFromDB(db *gorm.DB) (*ComponentConfig, error) {
 	// Verify that at least one component configuration section exists
 	componentSections := []string{
 		SectionDownloaders,
-		SectionPathMappings,
-		SectionPathMappers,
 		SectionParsers,
 		SectionScrapers,
 		SectionOrganizers,
@@ -246,15 +226,6 @@ func LoadComponentConfigFromDB(db *gorm.DB) (*ComponentConfig, error) {
 	if val, ok := settingsMap[SectionDownloaders]; ok && strings.TrimSpace(val) != "" {
 		if err := json.Unmarshal([]byte(val), &cfg.Downloaders); err != nil {
 			return nil, fmt.Errorf("unmarshal downloaders error: %w", err)
-		}
-	}
-	if val, ok := settingsMap[SectionPathMappings]; ok && strings.TrimSpace(val) != "" {
-		if err := json.Unmarshal([]byte(val), &cfg.PathMappings); err != nil {
-			return nil, fmt.Errorf("unmarshal path_mappings error: %w", err)
-		}
-	} else if val, ok := settingsMap[SectionPathMappers]; ok && strings.TrimSpace(val) != "" {
-		if err := json.Unmarshal([]byte(val), &cfg.PathMappings); err != nil {
-			return nil, fmt.Errorf("unmarshal pathmappers error: %w", err)
 		}
 	}
 	if val, ok := settingsMap[SectionParsers]; ok && strings.TrimSpace(val) != "" {
@@ -297,7 +268,6 @@ func SaveComponentConfigToDB(db *gorm.DB, cfg *ComponentConfig) error {
 		data     any
 	}{
 		{SectionDownloaders, "component", "Downloader component instances configuration", cfg.Downloaders},
-		{SectionPathMappings, "component", "Path mapper instances configuration", cfg.PathMappings},
 		{SectionParsers, "component", "Parser component instances configuration", cfg.Parsers},
 		{SectionScrapers, "component", "Scraper component instances configuration", cfg.Scrapers},
 		{SectionOrganizers, "component", "Organizer component instances configuration", cfg.Organizers},

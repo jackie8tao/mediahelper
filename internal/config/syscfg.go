@@ -93,9 +93,6 @@ func SaveSystemConfigToFile(path string, cfg *SystemConfig) error {
 // Combined Config & Backward Compatibility
 // ============================================================================
 
-// PathMapping is an alias for PathMapperInstanceConfig for backward compatibility.
-type PathMapping = PathMapperInstanceConfig
-
 // TMDBConfig holds legacy TheMovieDatabase scraping configuration.
 type TMDBConfig struct {
 	APIKey         string `json:"api_key"`         // TMDB API key (v3 auth)
