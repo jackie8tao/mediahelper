@@ -22,12 +22,16 @@
   ],
   "parsers": [
     {
-      "id": "parser:openai",
-      "type": "openai",
-      "name": "OpenAI 名称解析器",
-      "description": "基于 AIGC 大模型的媒体文件名解析器",
+      "id": "parser:deepseek",
+      "type": "deepseek",
+      "name": "DeepSeek 名称解析器",
+      "description": "基于 DeepSeek 大模型的媒体文件名解析器",
       "enabled": true,
-      "detail": {}
+      "detail": {
+        "api_key": "your_deepseek_api_key_here",
+        "base_url": "https://api.deepseek.com/v1",
+        "model": "deepseek-chat"
+      }
     }
   ],
   "scrapers": [
