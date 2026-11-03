@@ -35,7 +35,7 @@ var ErrConfigNotFound = errors.New("no component configuration found in database
 type ComponentConfig struct {
 	Downloaders  []DownloaderComponentConfig `json:"downloaders"`
 	PathMappings []PathMapperInstanceConfig  `json:"path_mappings"`
-	Parsers      []ParserInstanceConfig      `json:"parsers"`
+	Parsers      []ParserComponentConfig     `json:"parsers"`
 	Scrapers     []ScraperInstanceConfig     `json:"scrapers"`
 	Organizers   []OrganizerInstanceConfig   `json:"organizers"`
 	Plugins      PluginConfig                `json:"plugins"`
@@ -57,13 +57,14 @@ type PathMapperInstanceConfig struct {
 	Local  string `json:"local"`  // Local or host accessible path prefix
 }
 
-// ParserInstanceConfig represents configuration for an individual parser component.
-type ParserInstanceConfig struct {
-	ID                  string   `json:"id"`                    // Unique component ID, e.g. "parser", "parser:anime"
-	Name                string   `json:"name"`                  // Friendly display name
-	Enabled             bool     `json:"enabled"`               // Whether this parser instance is enabled
-	DefaultMediaType    string   `json:"default_media_type"`    // Optional default fallback media type (movie/tv/anime)
-	CustomReleaseGroups []string `json:"custom_release_groups"` // Optional additional release group identifiers
+// ParserComponentConfig represents configuration for an individual AIGC parser instance component.
+type ParserComponentConfig struct {
+	Enabled     bool            `json:"enabled"`     // Whether this parser instance is enabled
+	ID          string          `json:"id"`          // Unique component ID, e.g. "parser", "parser:openai", "parser:gemini"
+	Type        string          `json:"type"`        // Parser provider type, e.g. "openai", "gemini"
+	Name        string          `json:"name"`        // Friendly display name
+	Description string          `json:"description"` // Friendly display description
+	Detail      json.RawMessage `json:"detail"`      // Parser-specific configuration
 }
 
 // ScraperInstanceConfig represents configuration for an individual scraper component.
@@ -107,7 +108,7 @@ func DefaultComponentConfig() *ComponentConfig {
 	return &ComponentConfig{
 		Downloaders:  make([]DownloaderComponentConfig, 0),
 		PathMappings: make([]PathMapperInstanceConfig, 0),
-		Parsers:      make([]ParserInstanceConfig, 0),
+		Parsers:      make([]ParserComponentConfig, 0),
 		Scrapers:     make([]ScraperInstanceConfig, 0),
 		Organizers:   make([]OrganizerInstanceConfig, 0),
 		Plugins: PluginConfig{
@@ -134,11 +135,11 @@ func (c *ComponentConfig) GetPathMappings() []PathMapperInstanceConfig {
 }
 
 // GetParserConfigs returns all configured parser instances.
-func (c *ComponentConfig) GetParserConfigs() []ParserInstanceConfig {
+func (c *ComponentConfig) GetParserConfigs() []ParserComponentConfig {
 	if len(c.Parsers) > 0 {
 		return c.Parsers
 	}
-	return make([]ParserInstanceConfig, 0)
+	return make([]ParserComponentConfig, 0)
 }
 
 // GetScraperConfigs returns all configured scraper instances.

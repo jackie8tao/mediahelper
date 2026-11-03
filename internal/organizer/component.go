@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"path/filepath"
 
 	"github.com/jackie8tao/mediahelper/internal/config"
 	"github.com/jackie8tao/mediahelper/internal/downloader"
@@ -74,10 +73,6 @@ func (o *OrganizerComponent) Execute(ctx context.Context, sCtx *pipeline.StepCon
 	task := o.resolveTask(sCtx)
 	if task.SourcePath == "" {
 		return nil, fmt.Errorf("no source_path, content_path, or torrent provided for organizer component '%s'", o.id)
-	}
-
-	if task.MediaInfo == nil {
-		task.MediaInfo = parser.Parse(filepath.Base(task.SourcePath))
 	}
 
 	res, err := o.organizer.Organize(ctx, task)

@@ -59,13 +59,21 @@ func (o *Organizer) Organize(ctx context.Context, task OrganizeTask) (*OrganizeR
 
 	meta := task.Metadata
 	if meta == nil {
-		// 如果没有刮削到元数据，使用 parser 基础信息作为兜底
-		meta = &scraper.MediaMetadata{
-			Title:     task.MediaInfo.Title,
-			Year:      task.MediaInfo.Year,
-			MediaType: task.MediaInfo.MediaType,
-			Season:    task.MediaInfo.Season,
-			Episode:   task.MediaInfo.Episode,
+		if task.MediaInfo != nil {
+			// Fall back to MediaInfo provided by upstream parser step when scraper metadata is absent
+			meta = &scraper.MediaMetadata{
+				Title:     task.MediaInfo.Title,
+				Year:      task.MediaInfo.Year,
+				MediaType: task.MediaInfo.MediaType,
+				Season:    task.MediaInfo.Season,
+				Episode:   task.MediaInfo.Episode,
+			}
+		} else {
+			baseName := filepath.Base(task.SourcePath)
+			meta = &scraper.MediaMetadata{
+				Title:     strings.TrimSuffix(baseName, filepath.Ext(baseName)),
+				MediaType: parser.MediaTypeMovie,
+			}
 		}
 	}
 
@@ -154,10 +162,13 @@ func (o *Organizer) Organize(ctx context.Context, task OrganizeTask) (*OrganizeR
 		showDir := filepath.Join(baseTargetDir, titleYear)
 		result.TargetDir = showDir
 
-		for _, vFile := range videoFiles {
-			// 解析单文件对应的季集信息
-			subInfo := parser.Parse(filepath.Base(vFile))
-			season := subInfo.Season
+		for idx, vFile := range videoFiles {
+			season := 0
+			episode := 0
+			if task.MediaInfo != nil {
+				season = task.MediaInfo.Season
+				episode = task.MediaInfo.Episode
+			}
 			if season == 0 {
 				if meta.Season > 0 {
 					season = meta.Season
@@ -166,9 +177,14 @@ func (o *Organizer) Organize(ctx context.Context, task OrganizeTask) (*OrganizeR
 				}
 			}
 
-			episode := subInfo.Episode
-			if episode == 0 && meta.Episode > 0 {
-				episode = meta.Episode
+			if episode == 0 {
+				if len(videoFiles) > 1 {
+					episode = idx + 1
+				} else if meta.Episode > 0 {
+					episode = meta.Episode
+				} else {
+					episode = 1
+				}
 			}
 
 			seasonDirName := fmt.Sprintf("Season %02d", season)

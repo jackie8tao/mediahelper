@@ -28,11 +28,12 @@
   ],
   "parsers": [
     {
-      "id": "parser:movie",
-      "name": "电影解析器",
+      "id": "parser:openai",
+      "type": "openai",
+      "name": "OpenAI 名称解析器",
+      "description": "基于 AIGC 大模型的媒体文件名解析器",
       "enabled": true,
-      "default_media_type": "movie",
-      "custom_release_groups": []
+      "detail": {}
     }
   ],
   "scrapers": [
