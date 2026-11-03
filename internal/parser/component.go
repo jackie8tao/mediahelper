@@ -3,7 +3,6 @@ package parser
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"path/filepath"
 	"strings"
 
@@ -17,10 +16,10 @@ type ParserComponent struct {
 	cfg    config.ParserComponentConfig
 }
 
-func (c *ParserComponent) ID() string                          { return c.cfg.ID }
-func (c *ParserComponent) Name() string                        { return c.cfg.Name }
-func (c *ParserComponent) Description() string                 { return c.cfg.Description }
-func (c *ParserComponent) Parser() Parser                      { return c.parser }
+func (c *ParserComponent) ID() string                           { return c.cfg.ID }
+func (c *ParserComponent) Name() string                         { return c.cfg.Name }
+func (c *ParserComponent) Description() string                  { return c.cfg.Description }
+func (c *ParserComponent) Parser() Parser                       { return c.parser }
 func (c *ParserComponent) Config() config.ParserComponentConfig { return c.cfg }
 
 // Execute handles media title parsing operations within a pipeline step.
@@ -31,7 +30,7 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 
 	rawText := c.resolveRawInput(sCtx)
 	if strings.TrimSpace(rawText) == "" {
-		return nil, fmt.Errorf("no title, filename, or torrent provided for parser component '%s'", c.cfg.ID)
+		return nil, fmt.Errorf("no title, filename, or path provided for parser component '%s'", c.cfg.ID)
 	}
 
 	info, err := c.parser.Parse(ctx, rawText)
@@ -67,14 +66,14 @@ func (c *ParserComponent) resolveRawInput(sCtx *pipeline.StepContext) string {
 	}
 
 	// 1. Direct string parameters
-	for _, key := range []string{"raw", "title", "name"} {
+	for _, key := range []string{"title", "name"} {
 		if val := sCtx.GetStringParam(key, ""); val != "" {
 			return val
 		}
 	}
 
 	// 2. Direct path parameter (extract basename)
-	for _, key := range []string{"path", "file_path", "local_content_path", "local_path"} {
+	for _, key := range []string{"path", "file_path"} {
 		if val := sCtx.GetStringParam(key, ""); val != "" {
 			return filepath.Base(val)
 		}
@@ -82,12 +81,12 @@ func (c *ParserComponent) resolveRawInput(sCtx *pipeline.StepContext) string {
 
 	// 3. Event payload extraction
 	if sCtx.Event != nil {
-		for _, key := range []string{"raw", "title", "name"} {
+		for _, key := range []string{"title", "name"} {
 			if val, ok := sCtx.Event[key].(string); ok && val != "" {
 				return val
 			}
 		}
-		for _, key := range []string{"path", "file_path", "local_content_path", "local_path", "content_path"} {
+		for _, key := range []string{"path", "file_path"} {
 			if val, ok := sCtx.Event[key].(string); ok && val != "" {
 				return filepath.Base(val)
 			}
@@ -97,61 +96,18 @@ func (c *ParserComponent) resolveRawInput(sCtx *pipeline.StepContext) string {
 	// 4. Upstream steps extraction
 	if sCtx.Steps != nil {
 		for _, stepOutputs := range sCtx.Steps {
-			for _, key := range []string{"local_content_path", "local_path", "content_path", "path"} {
-				if val, ok := stepOutputs[key].(string); ok && val != "" {
-					return filepath.Base(val)
-				}
-			}
-			for _, key := range []string{"raw", "title", "name"} {
+			for _, key := range []string{"title", "name"} {
 				if val, ok := stepOutputs[key].(string); ok && val != "" {
 					return val
+				}
+			}
+			for _, key := range []string{"path", "file_path"} {
+				if val, ok := stepOutputs[key].(string); ok && val != "" {
+					return filepath.Base(val)
 				}
 			}
 		}
 	}
 
 	return ""
-}
-
-// RegisterComponents instantiates parser components according to system configuration
-// and registers each enabled instance into the provided ComponentRegistry.
-func RegisterComponents(cfg *config.ComponentConfig, registry *pipeline.ComponentRegistry) ([]*ParserComponent, error) {
-	if registry == nil {
-		return nil, fmt.Errorf("component registry cannot be nil")
-	}
-	if cfg == nil {
-		return nil, fmt.Errorf("config cannot be nil")
-	}
-
-	configs := cfg.GetParserConfigs()
-	if len(configs) == 0 {
-		slog.Debug("No parser instances configured")
-		return nil, nil
-	}
-
-	var registered []*ParserComponent
-
-	for _, pCfg := range configs {
-		if !pCfg.Enabled {
-			slog.Debug("Parser instance is disabled, skipping registration", "id", pCfg.ID)
-			continue
-		}
-
-		p, err := CreateParser(pCfg)
-		if err != nil {
-			return nil, fmt.Errorf("create parser component '%s' error: %w", pCfg.ID, err)
-		}
-		comp := &ParserComponent{
-			parser: p,
-			cfg:    pCfg,
-		}
-		if err := registry.Register(comp); err != nil {
-			return nil, fmt.Errorf("register parser component '%s' error: %w", pCfg.ID, err)
-		}
-
-		slog.Info("Registered parser pipeline component", "id", pCfg.ID, "type", pCfg.Type, "name", pCfg.Name)
-		registered = append(registered, comp)
-	}
-
-	return registered, nil
 }

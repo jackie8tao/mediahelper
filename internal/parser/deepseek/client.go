@@ -53,7 +53,7 @@ type Client struct {
 }
 
 func init() {
-	parser.RegisterFactory("deepseek", DeepSeekFactory)
+	parser.RegisterParserFactory("deepseek", DeepSeekFactory)
 }
 
 // DeepSeekFactory initializes a new DeepSeek parser client instance.
