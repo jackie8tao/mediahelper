@@ -1,10 +1,5 @@
 package organizer
 
-import (
-	"github.com/jackie8tao/mediahelper/internal/parser"
-	"github.com/jackie8tao/mediahelper/internal/scraper"
-)
-
 // LinkMode represents the file linking or transfer strategy for library organization.
 type LinkMode string
 
@@ -17,9 +12,14 @@ const (
 
 // OrganizeTask represents an incoming media file organization task request.
 type OrganizeTask struct {
-	SourcePath string                 `json:"source_path"` // Absolute local path to the source media file or directory
-	MediaInfo  *parser.MediaInfo      `json:"media_info"`  // Parsed media specification info
-	Metadata   *scraper.MediaMetadata `json:"metadata"`    // Scraped standardized media metadata
+	SourcePath   string `json:"source_path"`             // Absolute local path to the source media file or directory
+	MediaType    string `json:"media_type"`              // Media category: movie / tv / anime
+	Title        string `json:"title"`                   // Primary media title used for directory and file naming
+	Year         int    `json:"year"`                    // Release year
+	Season       int    `json:"season,omitempty"`        // Season number (for TV / anime)
+	Episode      int    `json:"episode,omitempty"`       // Episode number (for TV / anime)
+	EpisodeTitle string `json:"episode_title,omitempty"` // Optional episode title
+	Resolution   string `json:"resolution,omitempty"`    // Optional video resolution tag (e.g. 1080p, 4K)
 }
 
 // FilePair records the source-to-target file mapping after organization.
@@ -33,8 +33,5 @@ type OrganizeResult struct {
 	Success     bool       `json:"success"`
 	TargetDir   string     `json:"target_dir"`   // Target media library directory
 	LinkedFiles []FilePair `json:"linked_files"` // List of successfully organized file pairs
-	NFOPath     string     `json:"nfo_path"`     // Generated primary NFO file path
-	PosterPath  string     `json:"poster_path"`  // Saved poster image path
-	FanartPath  string     `json:"fanart_path"`  // Saved backdrop/fanart image path
 	Error       string     `json:"error,omitempty"`
 }
