@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/jackie8tao/mediahelper/internal/config"
@@ -25,20 +27,36 @@ var parserCmd = &cobra.Command{
 	Long:  `Test and debug the parser module with different providers and model configurations.`,
 }
 
-var parseInput string
+var (
+	parseInput string
+	parsePath  string
+)
 
 var parseCmd = &cobra.Command{
 	Use:   "parse [flags] [raw_title]",
-	Short: "Parse a raw media filename or torrent title into structured metadata",
+	Short: "Parse a raw media filename, torrent title, or local directory into structured metadata",
 	Example: `  mdhp parser parse -k sk-xxx "[SubsPlease] Sousou no Frieren - 01 (1080p).mkv"
-  mdhp parser parse -k sk-xxx -i "Inception.2010.2160p.UHD.BluRay.x265-GROUP"`,
+  mdhp parser parse -k sk-xxx -i "Inception.2010.2160p.UHD.BluRay.x265-GROUP"
+  mdhp parser parse -k sk-xxx -p ./tests/src/Frieren.S01`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		raw := strings.TrimSpace(parseInput)
-		if raw == "" && len(args) > 0 {
+		targetPath := strings.TrimSpace(parsePath)
+		if raw == "" && targetPath == "" && len(args) > 0 {
 			raw = strings.TrimSpace(args[0])
 		}
+
+		var relFiles []string
+		if targetPath != "" {
+			if raw == "" {
+				raw = filepath.Base(targetPath)
+			}
+			if fi, err := os.Stat(targetPath); err == nil && fi.IsDir() {
+				relFiles, _ = parser.ScanRelativeVideoFiles(targetPath)
+			}
+		}
+
 		if raw == "" {
-			return fmt.Errorf("raw input title is required (provide as argument or via -i/--input)")
+			return fmt.Errorf("raw input title or path is required (provide as argument, -i/--input, or -p/--path)")
 		}
 
 		detailBytes, err := json.Marshal(deepseek.Config{
@@ -58,7 +76,12 @@ var parseCmd = &cobra.Command{
 			return fmt.Errorf("create parser failed: %w", err)
 		}
 
-		info, err := p.Parse(context.Background(), raw)
+		var info *parser.MediaInfo
+		if len(relFiles) > 0 {
+			info, err = p.ParseFiles(context.Background(), raw, relFiles)
+		} else {
+			info, err = p.Parse(context.Background(), raw)
+		}
 		if err != nil {
 			return fmt.Errorf("parse failed: %w", err)
 		}
@@ -79,6 +102,7 @@ func init() {
 	parserCmd.PersistentFlags().StringVarP(&parserModel, "model", "m", "", "LLM model name (optional)")
 
 	parseCmd.Flags().StringVarP(&parseInput, "input", "i", "", "Raw filename or torrent title to parse")
+	parseCmd.Flags().StringVarP(&parsePath, "path", "p", "", "Local directory or file path to scan and parse")
 
 	parserCmd.AddCommand(parseCmd)
 	rootCmd.AddCommand(parserCmd)

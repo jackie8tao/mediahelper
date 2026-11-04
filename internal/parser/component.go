@@ -3,12 +3,18 @@ package parser
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/jackie8tao/mediahelper/internal/config"
 	"github.com/jackie8tao/mediahelper/internal/pipeline"
 )
+
+var videoExtensions = map[string]bool{
+	".mkv": true, ".mp4": true, ".avi": true, ".ts": true,
+	".mov": true, ".wmv": true, ".m2ts": true, ".flv": true,
+}
 
 // ParserComponent adapts a Parser implementation to the pipeline.Component interface.
 type ParserComponent struct {
@@ -22,7 +28,7 @@ func (c *ParserComponent) Description() string                  { return c.cfg.D
 func (c *ParserComponent) Parser() Parser                       { return c.parser }
 func (c *ParserComponent) Config() config.ParserComponentConfig { return c.cfg }
 
-// Execute handles media title parsing operations within a pipeline step.
+// Execute handles media title and multi-file directory parsing operations within a pipeline step.
 func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContext) (map[string]any, error) {
 	if c.parser == nil {
 		return nil, fmt.Errorf("parser client is not initialized for component '%s'", c.cfg.ID)
@@ -32,22 +38,39 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 	}
 
 	rawText := strings.TrimSpace(sCtx.GetStringParam("title", ""))
-	if rawText == "" {
-		if path := strings.TrimSpace(sCtx.GetStringParam("path", "")); path != "" {
+	path := strings.TrimSpace(sCtx.GetStringParam("path", ""))
+	files := sCtx.GetStringSliceParam("files")
+
+	if path != "" {
+		if rawText == "" {
 			rawText = filepath.Base(path)
 		}
+		if len(files) == 0 {
+			if fi, err := os.Stat(path); err == nil && fi.IsDir() {
+				files, _ = ScanRelativeVideoFiles(path)
+			}
+		}
 	}
+
 	if rawText == "" {
 		return nil, fmt.Errorf("missing required parameter 'title' or 'path' for parser component '%s'", c.cfg.ID)
 	}
 
-	info, err := c.parser.Parse(ctx, rawText)
+	var (
+		info *MediaInfo
+		err  error
+	)
+	if len(files) > 0 {
+		info, err = c.parser.ParseFiles(ctx, rawText, files)
+	} else {
+		info, err = c.parser.Parse(ctx, rawText)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("parser '%s' failed to parse '%s': %w", c.cfg.ID, rawText, err)
 	}
 
-	sCtx.Log(fmt.Sprintf("Parsed title '%s' via %s -> Title='%s', Year=%d, Type=%s, S%02dE%02d",
-		rawText, c.parser.Name(), info.Title, info.Year, info.MediaType, info.Season, info.Episode))
+	sCtx.Logf("Parsed '%s' via %s -> Title='%s', Year=%d, Type=%s, S%02dE%02d, Files=%d",
+		rawText, c.parser.Name(), info.Title, info.Year, info.MediaType, info.Season, info.Episode, len(info.Files))
 
 	outputs := map[string]any{
 		"media_info":  info,
@@ -62,7 +85,29 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 		"source":      info.Source,
 		"video_codec": info.VideoCodec,
 		"audio_codec": info.AudioCodec,
+		"files":       info.Files,
 	}
 
 	return outputs, nil
+}
+
+// ScanRelativeVideoFiles walks a directory and returns relative paths of all video files inside it.
+func ScanRelativeVideoFiles(rootDir string) ([]string, error) {
+	var relFiles []string
+	err := filepath.Walk(rootDir, func(p string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(info.Name()))
+		if !videoExtensions[ext] {
+			return nil
+		}
+		rel, relErr := filepath.Rel(rootDir, p)
+		if relErr != nil {
+			rel = info.Name()
+		}
+		relFiles = append(relFiles, filepath.ToSlash(rel))
+		return nil
+	})
+	return relFiles, err
 }

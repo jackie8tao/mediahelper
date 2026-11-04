@@ -42,6 +42,7 @@ func SeedDefaultPipelines(ctx context.Context, repo *Repository) error {
 				Component: "parser",
 				Params: map[string]any{
 					"title": "{{ event.name }}",
+					"path":  "{{ event.content_path }}",
 				},
 			},
 			{
@@ -70,6 +71,7 @@ func SeedDefaultPipelines(ctx context.Context, repo *Repository) error {
 					"episode":       "{{ steps.parser.episode }}",
 					"episode_title": "{{ steps.scraper.episode_title }}",
 					"resolution":    "{{ steps.parser.resolution }}",
+					"files":         "{{ steps.parser.files }}",
 				},
 			},
 			{

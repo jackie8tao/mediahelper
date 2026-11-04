@@ -160,43 +160,86 @@ func (c *Client) Organize(ctx context.Context, task organizer.OrganizeTask) (*or
 		showDir := filepath.Join(baseTargetDir, titleYear)
 		result.TargetDir = showDir
 
-		for idx, vFile := range videoFiles {
+		// Build episode items to process:
+		// 1. If LLM-parsed task.Files mappings are provided, use them directly.
+		// 2. If there is only a single video file, use task.Season and task.Episode.
+		// 3. If a directory contains multiple video files without task.Files, return an error instead of guessing.
+		var items []organizer.EpisodeFileItem
+		if len(task.Files) > 0 {
+			for _, item := range task.Files {
+				if strings.TrimSpace(item.File) == "" || item.Episode <= 0 {
+					continue
+				}
+				vPath := item.File
+				if !filepath.IsAbs(vPath) && srcFi.IsDir() {
+					vPath = filepath.Join(srcPath, filepath.FromSlash(item.File))
+				}
+				if !c.isVideoFile(vPath) {
+					continue
+				}
+				season := item.Season
+				if season <= 0 {
+					if task.Season > 0 {
+						season = task.Season
+					} else {
+						season = 1
+					}
+				}
+				epTitle := item.EpisodeTitle
+				if epTitle == "" && len(task.Files) == 1 {
+					epTitle = task.EpisodeTitle
+				}
+				items = append(items, organizer.EpisodeFileItem{
+					File:         vPath,
+					Season:       season,
+					Episode:      item.Episode,
+					EpisodeTitle: epTitle,
+				})
+			}
+		} else if len(videoFiles) == 1 {
 			season := task.Season
 			if season <= 0 {
 				season = 1
 			}
-
 			episode := task.Episode
 			if episode <= 0 {
-				if len(videoFiles) > 1 {
-					episode = idx + 1
-				} else {
-					episode = 1
-				}
+				episode = 1
 			}
+			items = append(items, organizer.EpisodeFileItem{
+				File:         videoFiles[0],
+				Season:       season,
+				Episode:      episode,
+				EpisodeTitle: task.EpisodeTitle,
+			})
+		} else {
+			err := fmt.Errorf("directory '%s' contains %d video files; LLM-parsed 'files' mapping is required for multi-episode season pack organization", srcPath, len(videoFiles))
+			result.Error = err.Error()
+			return result, err
+		}
 
-			seasonDir := filepath.Join(showDir, fmt.Sprintf("Season %02d", season))
-			ext := filepath.Ext(vFile)
+		for _, item := range items {
+			seasonDir := filepath.Join(showDir, fmt.Sprintf("Season %02d", item.Season))
+			ext := filepath.Ext(item.File)
 
 			var episodeFileName string
-			if epTitle := sanitizeFilename(task.EpisodeTitle); epTitle != "" && len(videoFiles) == 1 {
-				episodeFileName = fmt.Sprintf("%s - S%02dE%02d - %s%s", cleanTitle, season, episode, epTitle, ext)
+			if epTitle := sanitizeFilename(item.EpisodeTitle); epTitle != "" {
+				episodeFileName = fmt.Sprintf("%s - S%02dE%02d - %s%s", cleanTitle, item.Season, item.Episode, epTitle, ext)
 			} else {
-				episodeFileName = fmt.Sprintf("%s - S%02dE%02d%s", cleanTitle, season, episode, ext)
+				episodeFileName = fmt.Sprintf("%s - S%02dE%02d%s", cleanTitle, item.Season, item.Episode, ext)
 			}
 
 			targetFilePath := filepath.Join(seasonDir, episodeFileName)
 
-			if err := transferFile(vFile, targetFilePath, linkMode); err != nil {
-				slog.Error("Transfer episode file failed", "src", vFile, "dst", targetFilePath, "error", err)
+			if err := transferFile(item.File, targetFilePath, linkMode); err != nil {
+				slog.Error("Transfer episode file failed", "src", item.File, "dst", targetFilePath, "error", err)
 				continue
 			}
 			result.LinkedFiles = append(result.LinkedFiles, organizer.FilePair{
-				Source: vFile,
+				Source: item.File,
 				Target: targetFilePath,
 			})
 
-			c.transferSubtitles(vFile, targetFilePath, linkMode, result)
+			c.transferSubtitles(item.File, targetFilePath, linkMode, result)
 		}
 	}
 

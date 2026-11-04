@@ -36,13 +36,14 @@ var (
 	orgEpisode      int
 	orgEpisodeTitle string
 	orgResolution   string
+	orgFilesJSON    string
 )
 
 var organizeCmd = &cobra.Command{
 	Use:   "organize [flags] [source_path]",
 	Short: "Organize media file(s) into standardized library directory structures",
 	Example: `  mdhp organizer organize --movie-dir ./tmp/movies -s ./tmp/src/Inception.2010.1080p.mkv --title "盗梦空间" -y 2010 -r 1080p
-  mdhp organizer organize --tv-dir ./tmp/tv -m tv -s ./tmp/src/Frieren.S01E01.mkv --title "葬送的芙莉莲" -y 2023 --season 1 --episode 1`,
+  mdhp organizer organize --tv-dir ./tmp/tv -m tv -s ./tmp/src/Frieren.S01 --title "葬送的芙莉莲" -y 2023 --files '[{"file":"01.mkv","season":1,"episode":1},{"file":"02.mkv","season":1,"episode":2}]'`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		srcPath := strings.TrimSpace(orgSourcePath)
 		if srcPath == "" && len(args) > 0 {
@@ -50,6 +51,13 @@ var organizeCmd = &cobra.Command{
 		}
 		if srcPath == "" {
 			return fmt.Errorf("source path is required (provide as argument or via -s/--source)")
+		}
+
+		var parsedFiles []organizer.EpisodeFileItem
+		if strings.TrimSpace(orgFilesJSON) != "" {
+			if err := json.Unmarshal([]byte(orgFilesJSON), &parsedFiles); err != nil {
+				return fmt.Errorf("unmarshal --files JSON failed: %w", err)
+			}
 		}
 
 		detailBytes, err := json.Marshal(local.Config{
@@ -80,6 +88,7 @@ var organizeCmd = &cobra.Command{
 			Episode:      orgEpisode,
 			EpisodeTitle: orgEpisodeTitle,
 			Resolution:   orgResolution,
+			Files:        parsedFiles,
 		}
 
 		res, err := org.Organize(context.Background(), task)
@@ -108,10 +117,11 @@ func init() {
 	organizeCmd.Flags().StringVarP(&orgMediaType, "media-type", "m", "movie", "Media category (movie, tv, anime)")
 	organizeCmd.Flags().StringVar(&orgTitle, "title", "", "Primary media title")
 	organizeCmd.Flags().IntVarP(&orgYear, "year", "y", 0, "Release year")
-	organizeCmd.Flags().IntVar(&orgSeason, "season", 1, "Season number (for tv/anime)")
-	organizeCmd.Flags().IntVar(&orgEpisode, "episode", 1, "Episode number (for tv/anime)")
+	organizeCmd.Flags().IntVar(&orgSeason, "season", 1, "Season number (for single-episode tv/anime)")
+	organizeCmd.Flags().IntVar(&orgEpisode, "episode", 1, "Episode number (for single-episode tv/anime)")
 	organizeCmd.Flags().StringVar(&orgEpisodeTitle, "episode-title", "", "Episode title (optional)")
 	organizeCmd.Flags().StringVarP(&orgResolution, "resolution", "r", "", "Video resolution tag (e.g. 1080p, 4K)")
+	organizeCmd.Flags().StringVar(&orgFilesJSON, "files", "", "JSON array of file-to-episode mappings for multi-file season packs")
 
 	organizerCmd.AddCommand(organizeCmd)
 	rootCmd.AddCommand(organizerCmd)
