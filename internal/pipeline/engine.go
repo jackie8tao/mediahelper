@@ -414,7 +414,7 @@ func (e *Engine) executeStep(
 	}
 
 	// Build step context
-	sCtx := NewStepContext(execID, pipelineID, step.ID, step.Name, step.Component, resolvedParams, triggerData, stepOutputs)
+	sCtx := NewStepContext(execID, pipelineID, step.ID, step.Name, step.Component, resolvedParams)
 
 	// 4. Execute component with timeout and panic protection
 	output, execErr := e.invokeComponent(ctx, comp, sCtx, step.TimeoutSeconds)

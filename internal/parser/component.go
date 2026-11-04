@@ -27,10 +27,18 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 	if c.parser == nil {
 		return nil, fmt.Errorf("parser client is not initialized for component '%s'", c.cfg.ID)
 	}
+	if sCtx == nil {
+		return nil, fmt.Errorf("step context cannot be nil for parser component '%s'", c.cfg.ID)
+	}
 
-	rawText := c.resolveRawInput(sCtx)
-	if strings.TrimSpace(rawText) == "" {
-		return nil, fmt.Errorf("no title, filename, or path provided for parser component '%s'", c.cfg.ID)
+	rawText := strings.TrimSpace(sCtx.GetStringParam("title", ""))
+	if rawText == "" {
+		if path := strings.TrimSpace(sCtx.GetStringParam("path", "")); path != "" {
+			rawText = filepath.Base(path)
+		}
+	}
+	if rawText == "" {
+		return nil, fmt.Errorf("missing required parameter 'title' or 'path' for parser component '%s'", c.cfg.ID)
 	}
 
 	info, err := c.parser.Parse(ctx, rawText)
@@ -57,57 +65,4 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 	}
 
 	return outputs, nil
-}
-
-// resolveRawInput extracts raw title or filename from parameters, event payload, or upstream steps.
-func (c *ParserComponent) resolveRawInput(sCtx *pipeline.StepContext) string {
-	if sCtx == nil {
-		return ""
-	}
-
-	// 1. Direct string parameters
-	for _, key := range []string{"title", "name"} {
-		if val := sCtx.GetStringParam(key, ""); val != "" {
-			return val
-		}
-	}
-
-	// 2. Direct path parameter (extract basename)
-	for _, key := range []string{"path", "file_path"} {
-		if val := sCtx.GetStringParam(key, ""); val != "" {
-			return filepath.Base(val)
-		}
-	}
-
-	// 3. Event payload extraction
-	if sCtx.Event != nil {
-		for _, key := range []string{"title", "name"} {
-			if val, ok := sCtx.Event[key].(string); ok && val != "" {
-				return val
-			}
-		}
-		for _, key := range []string{"path", "file_path"} {
-			if val, ok := sCtx.Event[key].(string); ok && val != "" {
-				return filepath.Base(val)
-			}
-		}
-	}
-
-	// 4. Upstream steps extraction
-	if sCtx.Steps != nil {
-		for _, stepOutputs := range sCtx.Steps {
-			for _, key := range []string{"title", "name"} {
-				if val, ok := stepOutputs[key].(string); ok && val != "" {
-					return val
-				}
-			}
-			for _, key := range []string{"path", "file_path"} {
-				if val, ok := stepOutputs[key].(string); ok && val != "" {
-					return filepath.Base(val)
-				}
-			}
-		}
-	}
-
-	return ""
 }

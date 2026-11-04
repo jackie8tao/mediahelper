@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -8,7 +9,7 @@ import (
 	"time"
 )
 
-// StepContext carries resolved parameters, incoming event data, upstream step outputs, and execution logs for a step.
+// StepContext carries resolved step parameters and execution logs for a single step run.
 type StepContext struct {
 	ExecutionID string
 	PipelineID  uint
@@ -18,12 +19,6 @@ type StepContext struct {
 
 	// Params contains the resolved input parameters after template interpolation.
 	Params map[string]any
-
-	// Event is the original trigger event payload.
-	Event map[string]any
-
-	// Steps contains outputs from previously completed steps: steps[stepID] = outputMap.
-	Steps map[string]map[string]any
 
 	mu   sync.Mutex
 	logs []string
@@ -37,17 +32,9 @@ func NewStepContext(
 	stepName string,
 	componentID string,
 	params map[string]any,
-	event map[string]any,
-	steps map[string]map[string]any,
 ) *StepContext {
 	if params == nil {
 		params = make(map[string]any)
-	}
-	if event == nil {
-		event = make(map[string]any)
-	}
-	if steps == nil {
-		steps = make(map[string]map[string]any)
 	}
 
 	return &StepContext{
@@ -57,10 +44,26 @@ func NewStepContext(
 		StepName:    stepName,
 		ComponentID: componentID,
 		Params:      params,
-		Event:       event,
-		Steps:       steps,
 		logs:        make([]string, 0),
 	}
+}
+
+// BindParams decodes the resolved Params map into a target struct using JSON tags.
+func (c *StepContext) BindParams(target any) error {
+	if target == nil {
+		return fmt.Errorf("bind target cannot be nil")
+	}
+	if len(c.Params) == 0 {
+		return nil
+	}
+	raw, err := json.Marshal(c.Params)
+	if err != nil {
+		return fmt.Errorf("marshal step params error: %w", err)
+	}
+	if err := json.Unmarshal(raw, target); err != nil {
+		return fmt.Errorf("unmarshal step params error: %w", err)
+	}
+	return nil
 }
 
 // Log records a single timestamped log entry.
@@ -147,6 +150,47 @@ func (c *StepContext) GetBoolParam(key string, defaultVal bool) bool {
 		return val != 0
 	}
 	return defaultVal
+}
+
+// GetStringSliceParam retrieves a string slice parameter from a []string, []any, or comma-separated string.
+func (c *StepContext) GetStringSliceParam(key string) []string {
+	v, ok := c.Params[key]
+	if !ok || v == nil {
+		return nil
+	}
+
+	var result []string
+	switch val := v.(type) {
+	case string:
+		for _, part := range strings.Split(val, ",") {
+			if trimmed := strings.TrimSpace(part); trimmed != "" {
+				result = append(result, trimmed)
+			}
+		}
+	case []string:
+		for _, item := range val {
+			for _, part := range strings.Split(item, ",") {
+				if trimmed := strings.TrimSpace(part); trimmed != "" {
+					result = append(result, trimmed)
+				}
+			}
+		}
+	case []any:
+		for _, item := range val {
+			if s, ok := item.(string); ok {
+				for _, part := range strings.Split(s, ",") {
+					if trimmed := strings.TrimSpace(part); trimmed != "" {
+						result = append(result, trimmed)
+					}
+				}
+			} else if item != nil {
+				if trimmed := strings.TrimSpace(fmt.Sprintf("%v", item)); trimmed != "" {
+					result = append(result, trimmed)
+				}
+			}
+		}
+	}
+	return result
 }
 
 // GetMapParam retrieves a map[string]any parameter.

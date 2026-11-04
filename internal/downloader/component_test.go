@@ -104,7 +104,7 @@ func TestDownloaderComponent_ExecuteActions(t *testing.T) {
 		"category":  "movie",
 		"tags":      "MediaHelper,Auto",
 		"paused":    true,
-	}, nil, nil)
+	})
 
 	out, err := comp.Execute(ctx, addCtx)
 	if err != nil {
@@ -117,27 +117,25 @@ func TestDownloaderComponent_ExecuteActions(t *testing.T) {
 		t.Fatalf("unexpected AddTorrentOptions: %+v", mock.addedOpts)
 	}
 
-	// 2. Test get_torrent (resolving hash from event automatically)
+	// 2. Test get_torrents
 	getCtx := pipeline.NewStepContext("exec-1", 1, "step-get", "Get", comp.ID(), map[string]any{
 		"action": ActionGetTorrents,
-	}, map[string]any{
-		"hash": "abc12345",
-	}, nil)
+		"hash":   "abc12345",
+	})
 
 	out, err = comp.Execute(ctx, getCtx)
 	if err != nil {
-		t.Fatalf("get_torrent failed: %v", err)
+		t.Fatalf("get_torrents failed: %v", err)
 	}
 	if out["name"] != "Inception.2010.1080p" || out["content_path"] != "/downloads/Inception.2010.1080p" {
-		t.Fatalf("unexpected get_torrent output: %+v", out)
+		t.Fatalf("unexpected get_torrents output: %+v", out)
 	}
 
-	// 3. Test delete_torrent (resolving hash from upstream step output)
+	// 3. Test delete_torrent
 	delCtx := pipeline.NewStepContext("exec-1", 1, "step-del", "Delete", comp.ID(), map[string]any{
 		"action":       ActionDeleteTorrent,
+		"hash":         "abc12345",
 		"delete_files": true,
-	}, nil, map[string]map[string]any{
-		"step-get": out,
 	})
 
 	out, err = comp.Execute(ctx, delCtx)
@@ -151,10 +149,9 @@ func TestDownloaderComponent_ExecuteActions(t *testing.T) {
 	// 4. Test add_tags
 	tagCtx := pipeline.NewStepContext("exec-1", 1, "step-tag", "Tag", comp.ID(), map[string]any{
 		"action": ActionAddTags,
+		"hash":   "abc12345",
 		"tags":   []string{"MediaHelper:Done"},
-	}, map[string]any{
-		"hash": "abc12345",
-	}, nil)
+	})
 
 	if _, err := comp.Execute(ctx, tagCtx); err != nil {
 		t.Fatalf("add_tags failed: %v", err)

@@ -40,16 +40,37 @@ func SeedDefaultPipelines(ctx context.Context, repo *Repository) error {
 				ID:        "parser",
 				Name:      "Parse Media Title",
 				Component: "parser",
+				Params: map[string]any{
+					"title": "{{ event.name }}",
+				},
 			},
 			{
 				ID:        "scraper",
 				Name:      "Scrape TMDB Metadata",
 				Component: "scraper",
+				Params: map[string]any{
+					"title":      "{{ steps.parser.title }}",
+					"year":       "{{ steps.parser.year }}",
+					"media_type": "{{ steps.parser.media_type }}",
+					"season":     "{{ steps.parser.season }}",
+					"episode":    "{{ steps.parser.episode }}",
+				},
 			},
 			{
 				ID:        "organizer",
 				Name:      "Organize Media Files",
 				Component: "organizer",
+				Params: map[string]any{
+					"action":        "organize",
+					"source_path":   "{{ event.content_path }}",
+					"media_type":    "{{ steps.scraper.media_type }}",
+					"title":         "{{ steps.scraper.title }}",
+					"year":          "{{ steps.scraper.year }}",
+					"season":        "{{ steps.parser.season }}",
+					"episode":       "{{ steps.parser.episode }}",
+					"episode_title": "{{ steps.scraper.episode_title }}",
+					"resolution":    "{{ steps.parser.resolution }}",
+				},
 			},
 			{
 				ID:        "tag_done",
@@ -57,6 +78,7 @@ func SeedDefaultPipelines(ctx context.Context, repo *Repository) error {
 				Component: "downloader",
 				Params: map[string]any{
 					"action": "add_tags",
+					"hash":   "{{ event.hash }}",
 					"tags":   []string{"MediaHelper:Done"},
 				},
 				ContinueOnError: true,

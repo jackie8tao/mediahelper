@@ -68,50 +68,17 @@ func (c *DownloaderComponent) Execute(ctx context.Context, sCtx *pipeline.StepCo
 
 // execAddTorrent handles adding a torrent from a local .torrent file or URL/magnet link.
 func (c *DownloaderComponent) execAddTorrent(ctx context.Context, sCtx *pipeline.StepContext) (map[string]any, error) {
-	filePath := firstNonEmptyString(
-		sCtx.GetStringParam("file", ""),
-		sCtx.GetStringParam("file_path", ""),
-	)
-	url := firstNonEmptyString(
-		sCtx.GetStringParam("url", ""),
-		sCtx.GetStringParam("magnet", ""),
-	)
-
-	// Fallback to event payload if neither file_path nor url is explicitly provided in step params
-	if filePath == "" && url == "" && sCtx.Event != nil {
-		for _, k := range []string{"file", "file_path"} {
-			if v, ok := sCtx.Event[k].(string); ok && strings.TrimSpace(v) != "" {
-				filePath = strings.TrimSpace(v)
-				break
-			}
-		}
-		for _, k := range []string{"url", "magnet"} {
-			if v, ok := sCtx.Event[k].(string); ok && strings.TrimSpace(v) != "" {
-				url = strings.TrimSpace(v)
-				break
-			}
-		}
-	}
-
-	if filePath == "" && url == "" {
-		return nil, fmt.Errorf("action '%s' requires 'file_path' or 'url' parameter", ActionAddTorrent)
-	}
-
-	savePath := firstNonEmptyString(
-		sCtx.GetStringParam("save_path", ""),
-		sCtx.GetStringParam("savepath", ""),
-	)
-	category := sCtx.GetStringParam("category", "")
-	tags := c.resolveTags(sCtx)
-	paused := sCtx.GetBoolParam("paused", false)
-
 	opts := AddTorrentOptions{
-		FilePath: filePath,
-		URL:      url,
-		SavePath: savePath,
-		Category: category,
-		Tags:     tags,
-		Paused:   paused,
+		FilePath: strings.TrimSpace(sCtx.GetStringParam("file_path", "")),
+		URL:      strings.TrimSpace(sCtx.GetStringParam("url", "")),
+		SavePath: strings.TrimSpace(sCtx.GetStringParam("save_path", "")),
+		Category: strings.TrimSpace(sCtx.GetStringParam("category", "")),
+		Tags:     sCtx.GetStringSliceParam("tags"),
+		Paused:   sCtx.GetBoolParam("paused", false),
+	}
+
+	if opts.FilePath == "" && opts.URL == "" {
+		return nil, fmt.Errorf("action '%s' requires 'file_path' or 'url' parameter", ActionAddTorrent)
 	}
 
 	hashes, err := c.dl.AddTorrent(ctx, opts)
@@ -124,31 +91,31 @@ func (c *DownloaderComponent) execAddTorrent(ctx context.Context, sCtx *pipeline
 		primaryHash = hashes[0]
 	}
 
-	sourceDesc := filePath
+	sourceDesc := opts.FilePath
 	if sourceDesc == "" {
-		sourceDesc = url
+		sourceDesc = opts.URL
 	}
 	sCtx.Logf("Added torrent '%s' via %s (hashes=%v, category=%q, tags=%v)",
-		sourceDesc, c.dl.Name(), hashes, category, tags)
+		sourceDesc, c.dl.Name(), hashes, opts.Category, opts.Tags)
 
 	return map[string]any{
 		"action":    ActionAddTorrent,
 		"hash":      primaryHash,
 		"hashes":    hashes,
-		"file_path": filePath,
-		"url":       url,
-		"save_path": savePath,
-		"category":  category,
-		"tags":      tags,
-		"paused":    paused,
+		"file_path": opts.FilePath,
+		"url":       opts.URL,
+		"save_path": opts.SavePath,
+		"category":  opts.Category,
+		"tags":      opts.Tags,
+		"paused":    opts.Paused,
 	}, nil
 }
 
 // execDeleteTorrent handles deleting one or more torrents and optionally removing downloaded files.
 func (c *DownloaderComponent) execDeleteTorrent(ctx context.Context, sCtx *pipeline.StepContext) (map[string]any, error) {
-	hashes := c.resolveHashes(sCtx)
+	hashes := getHashesParam(sCtx)
 	if len(hashes) == 0 {
-		return nil, fmt.Errorf("action '%s' requires at least one torrent hash", ActionDeleteTorrent)
+		return nil, fmt.Errorf("action '%s' requires 'hashes' or 'hash' parameter", ActionDeleteTorrent)
 	}
 
 	deleteFiles := sCtx.GetBoolParam("delete_files", true)
@@ -169,30 +136,21 @@ func (c *DownloaderComponent) execDeleteTorrent(ctx context.Context, sCtx *pipel
 
 // execGetTorrents retrieves torrents matching hash or filter parameters.
 func (c *DownloaderComponent) execGetTorrents(ctx context.Context, sCtx *pipeline.StepContext) (map[string]any, error) {
-	hashes := c.resolveHashes(sCtx)
-	filter := sCtx.GetStringParam("filter", "")
-	category := sCtx.GetStringParam("category", "")
-	tag := firstNonEmptyString(
-		sCtx.GetStringParam("tag", ""),
-		sCtx.GetStringParam("tags", ""),
-	)
-	limit := sCtx.GetIntParam("limit", 0)
-
 	opts := GetTorrentsOptions{
-		Hashes:   hashes,
-		Filter:   filter,
-		Category: category,
-		Tag:      tag,
-		Limit:    limit,
+		Hashes:   getHashesParam(sCtx),
+		Filter:   strings.TrimSpace(sCtx.GetStringParam("filter", "")),
+		Category: strings.TrimSpace(sCtx.GetStringParam("category", "")),
+		Tag:      strings.TrimSpace(sCtx.GetStringParam("tag", "")),
+		Limit:    sCtx.GetIntParam("limit", 0),
 	}
 
 	torrents, err := c.dl.GetTorrents(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("downloader '%s' get_torrent failed: %w", c.cfg.ID, err)
+		return nil, fmt.Errorf("downloader '%s' get_torrents failed: %w", c.cfg.ID, err)
 	}
 
 	sCtx.Logf("Fetched %d torrent(s) via %s (hashes=%v, filter=%q, category=%q, tag=%q)",
-		len(torrents), c.dl.Name(), hashes, filter, category, tag)
+		len(torrents), c.dl.Name(), opts.Hashes, opts.Filter, opts.Category, opts.Tag)
 
 	if len(torrents) > 0 {
 		return buildTorrentOutputs(torrents[0], torrents), nil
@@ -205,16 +163,16 @@ func (c *DownloaderComponent) execGetTorrents(ctx context.Context, sCtx *pipelin
 	}, nil
 }
 
-// execAddTags adds one or more tags to the resolved torrent hashes.
+// execAddTags adds one or more tags to the specified torrent hashes.
 func (c *DownloaderComponent) execAddTags(ctx context.Context, sCtx *pipeline.StepContext) (map[string]any, error) {
-	hashes := c.resolveHashes(sCtx)
+	hashes := getHashesParam(sCtx)
 	if len(hashes) == 0 {
-		return nil, fmt.Errorf("action '%s' requires at least one torrent hash", ActionAddTags)
+		return nil, fmt.Errorf("action '%s' requires 'hashes' or 'hash' parameter", ActionAddTags)
 	}
 
-	tags := c.resolveTags(sCtx)
+	tags := sCtx.GetStringSliceParam("tags")
 	if len(tags) == 0 {
-		return nil, fmt.Errorf("action '%s' requires 'tags' or 'tag' parameter", ActionAddTags)
+		return nil, fmt.Errorf("action '%s' requires 'tags' parameter", ActionAddTags)
 	}
 
 	if err := c.dl.AddTags(ctx, hashes, tags); err != nil {
@@ -231,16 +189,16 @@ func (c *DownloaderComponent) execAddTags(ctx context.Context, sCtx *pipeline.St
 	}, nil
 }
 
-// execRemoveTags removes one or more tags from the resolved torrent hashes.
+// execRemoveTags removes one or more tags from the specified torrent hashes.
 func (c *DownloaderComponent) execRemoveTags(ctx context.Context, sCtx *pipeline.StepContext) (map[string]any, error) {
-	hashes := c.resolveHashes(sCtx)
+	hashes := getHashesParam(sCtx)
 	if len(hashes) == 0 {
-		return nil, fmt.Errorf("action '%s' requires at least one torrent hash", ActionRemoveTags)
+		return nil, fmt.Errorf("action '%s' requires 'hashes' or 'hash' parameter", ActionRemoveTags)
 	}
 
-	tags := c.resolveTags(sCtx)
+	tags := sCtx.GetStringSliceParam("tags")
 	if len(tags) == 0 {
-		return nil, fmt.Errorf("action '%s' requires 'tags' or 'tag' parameter", ActionRemoveTags)
+		return nil, fmt.Errorf("action '%s' requires 'tags' parameter", ActionRemoveTags)
 	}
 
 	if err := c.dl.RemoveTags(ctx, hashes, tags); err != nil {
@@ -257,11 +215,11 @@ func (c *DownloaderComponent) execRemoveTags(ctx context.Context, sCtx *pipeline
 	}, nil
 }
 
-// execPause pauses the resolved torrent hashes.
+// execPause pauses the specified torrent hashes.
 func (c *DownloaderComponent) execPause(ctx context.Context, sCtx *pipeline.StepContext) (map[string]any, error) {
-	hashes := c.resolveHashes(sCtx)
+	hashes := getHashesParam(sCtx)
 	if len(hashes) == 0 {
-		return nil, fmt.Errorf("action '%s' requires at least one torrent hash", ActionPause)
+		return nil, fmt.Errorf("action '%s' requires 'hashes' or 'hash' parameter", ActionPause)
 	}
 
 	if err := c.dl.Pause(ctx, hashes); err != nil {
@@ -277,11 +235,11 @@ func (c *DownloaderComponent) execPause(ctx context.Context, sCtx *pipeline.Step
 	}, nil
 }
 
-// execResume resumes the resolved torrent hashes.
+// execResume resumes the specified torrent hashes.
 func (c *DownloaderComponent) execResume(ctx context.Context, sCtx *pipeline.StepContext) (map[string]any, error) {
-	hashes := c.resolveHashes(sCtx)
+	hashes := getHashesParam(sCtx)
 	if len(hashes) == 0 {
-		return nil, fmt.Errorf("action '%s' requires at least one torrent hash", ActionResume)
+		return nil, fmt.Errorf("action '%s' requires 'hashes' or 'hash' parameter", ActionResume)
 	}
 
 	if err := c.dl.Resume(ctx, hashes); err != nil {
@@ -297,118 +255,12 @@ func (c *DownloaderComponent) execResume(ctx context.Context, sCtx *pipeline.Ste
 	}, nil
 }
 
-// resolveHashes extracts target torrent hashes in priority order:
-// 1. Step parameters ("hashes", "hash")
-// 2. Trigger event payload ("hashes", "hash")
-// 3. Upstream step outputs ("hashes", "hash")
-func (c *DownloaderComponent) resolveHashes(sCtx *pipeline.StepContext) []string {
-	if sCtx == nil {
-		return nil
-	}
-
-	// 1. Step Params
-	if hashes := extractHashesFromMap(sCtx.Params); len(hashes) > 0 {
+// getHashesParam extracts torrent hashes strictly from step parameters ("hashes" or "hash").
+func getHashesParam(sCtx *pipeline.StepContext) []string {
+	if hashes := sCtx.GetStringSliceParam("hashes"); len(hashes) > 0 {
 		return hashes
 	}
-
-	// 2. Event Payload
-	if hashes := extractHashesFromMap(sCtx.Event); len(hashes) > 0 {
-		return hashes
-	}
-
-	// 3. Upstream Steps
-	for _, stepOut := range sCtx.Steps {
-		if hashes := extractHashesFromMap(stepOut); len(hashes) > 0 {
-			return hashes
-		}
-	}
-
-	return nil
-}
-
-// resolveTags extracts tags from "tags" or "tag" parameters in sCtx.Params.
-func (c *DownloaderComponent) resolveTags(sCtx *pipeline.StepContext) []string {
-	if sCtx == nil || sCtx.Params == nil {
-		return nil
-	}
-	for _, key := range []string{"tags", "tag"} {
-		if raw, ok := sCtx.Params[key]; ok {
-			if list := parseStringSlice(raw); len(list) > 0 {
-				return list
-			}
-		}
-	}
-	return nil
-}
-
-// extractHashesFromMap attempts to extract torrent hash(es) from a generic map.
-func extractHashesFromMap(m map[string]any) []string {
-	if len(m) == 0 {
-		return nil
-	}
-
-	if raw, ok := m["hashes"]; ok {
-		if list := parseStringSlice(raw); len(list) > 0 {
-			return list
-		}
-	}
-
-	if raw, ok := m["hash"]; ok {
-		if list := parseStringSlice(raw); len(list) > 0 {
-			return list
-		}
-	}
-
-	return nil
-}
-
-// parseStringSlice converts a string (comma-separated), []string, or []any into a clean []string.
-func parseStringSlice(raw any) []string {
-	if raw == nil {
-		return nil
-	}
-
-	var result []string
-	switch v := raw.(type) {
-	case string:
-		for _, part := range strings.Split(v, ",") {
-			if trimmed := strings.TrimSpace(part); trimmed != "" {
-				result = append(result, trimmed)
-			}
-		}
-	case []string:
-		for _, item := range v {
-			for _, part := range strings.Split(item, ",") {
-				if trimmed := strings.TrimSpace(part); trimmed != "" {
-					result = append(result, trimmed)
-				}
-			}
-		}
-	case []any:
-		for _, item := range v {
-			if s, ok := item.(string); ok {
-				for _, part := range strings.Split(s, ",") {
-					if trimmed := strings.TrimSpace(part); trimmed != "" {
-						result = append(result, trimmed)
-					}
-				}
-			} else if item != nil {
-				if trimmed := strings.TrimSpace(fmt.Sprintf("%v", item)); trimmed != "" {
-					result = append(result, trimmed)
-				}
-			}
-		}
-	}
-	return result
-}
-
-func firstNonEmptyString(values ...string) string {
-	for _, v := range values {
-		if trimmed := strings.TrimSpace(v); trimmed != "" {
-			return trimmed
-		}
-	}
-	return ""
+	return sCtx.GetStringSliceParam("hash")
 }
 
 func torrentToMap(t Torrent) map[string]any {
