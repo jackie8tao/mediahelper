@@ -23,7 +23,51 @@ func (c *ScraperComponent) Config() config.ScraperComponentConfig { return c.cfg
 
 // Execute handles scraper operations within a pipeline step.
 func (c *ScraperComponent) Execute(ctx context.Context, sCtx *pipeline.StepContext) (map[string]any, error) {
-	return nil, nil
+	if c.scraper == nil {
+		return nil, fmt.Errorf("scraper client is not initialized for component '%s'", c.cfg.ID)
+	}
+	if sCtx == nil {
+		return nil, fmt.Errorf("step context cannot be nil for scraper component '%s'", c.cfg.ID)
+	}
+
+	var task ScrapeTask
+	if err := sCtx.BindParams(&task); err != nil {
+		return nil, fmt.Errorf("bind scraper params failed for '%s': %w", c.cfg.ID, err)
+	}
+
+	res, err := c.scraper.Scrape(ctx, task)
+	if err != nil {
+		return nil, fmt.Errorf("scraper '%s' failed for target '%s': %w", c.cfg.ID, task.TargetDir, err)
+	}
+
+	title := ""
+	tmdbID := 0
+	if res.Metadata != nil {
+		title = res.Metadata.Title
+		tmdbID = res.Metadata.TMDBID
+	}
+
+	sCtx.Logf("Scraped '%s' via %s -> Title='%s', TMDB=%d, CreatedFiles=%d",
+		res.TargetDir, c.scraper.Name(), title, tmdbID, len(res.CreatedFiles))
+
+	outputs := map[string]any{
+		"scrape_result": res,
+		"success":       res.Success,
+		"target_dir":    res.TargetDir,
+		"created_files": res.CreatedFiles,
+	}
+
+	if res.Metadata != nil {
+		outputs["title"] = res.Metadata.Title
+		outputs["original_title"] = res.Metadata.OriginalTitle
+		outputs["year"] = res.Metadata.Year
+		outputs["tmdb_id"] = res.Metadata.TMDBID
+		outputs["poster_url"] = res.Metadata.PosterURL
+		outputs["backdrop_url"] = res.Metadata.BackdropURL
+		outputs["metadata"] = res.Metadata
+	}
+
+	return outputs, nil
 }
 
 // RegisterComponents instantiates scraper components according to system configuration

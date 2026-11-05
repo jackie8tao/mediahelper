@@ -7,32 +7,56 @@ type Actor struct {
 	Thumb string `json:"thumb"` // Profile image URL
 }
 
+// EpisodeMetadata holds metadata for a single television or anime episode.
+type EpisodeMetadata struct {
+	Season       int     `json:"season"`        // Season number (1+)
+	Episode      int     `json:"episode"`       // Episode number (1+)
+	Title        string  `json:"title"`         // Episode title
+	Plot         string  `json:"plot"`          // Episode overview / plot
+	Rating       float64 `json:"rating"`        // Episode rating score (0.0 - 10.0)
+	Aired        string  `json:"aired"`         // Air date (YYYY-MM-DD)
+	ThumbnailURL string  `json:"thumbnail_url"` // Episode still / thumbnail URL
+}
+
 // MediaMetadata holds standardized multimedia metadata scraped from external providers.
 type MediaMetadata struct {
-	TMDBID        int      `json:"tmdb_id"`        // TMDB ID
-	IMDbID        string   `json:"imdb_id"`        // IMDb ID (e.g. tt15398776)
-	MediaType     string   `json:"media_type"`     // Media type: movie / tv / anime
-	Title         string   `json:"title"`          // Official localized title
-	OriginalTitle string   `json:"original_title"` // Original language title
-	SortTitle     string   `json:"sort_title"`     // Sort title
-	Year          int      `json:"year"`           // Release year
-	Premiered     string   `json:"premiered"`      // Premiere date (YYYY-MM-DD)
-	Plot          string   `json:"plot"`           // Overview / plot summary
-	Rating        float64  `json:"rating"`         // Rating score (0.0 - 10.0)
-	Votes         int      `json:"votes"`          // Rating vote count
-	Genres        []string `json:"genres"`         // Genre tags
-	Studios       []string `json:"studios"`        // Production companies / studios
-	Directors     []string `json:"directors"`      // Director names
-	Actors        []Actor  `json:"actors"`         // Principal cast list
-	PosterURL     string   `json:"poster_url"`     // Full poster image URL
-	BackdropURL   string   `json:"backdrop_url"`   // Full backdrop / fanart URL
+	TMDBID        int               `json:"tmdb_id"`        // TMDB ID
+	IMDbID        string            `json:"imdb_id"`        // IMDb ID (e.g. tt15398776)
+	MediaType     string            `json:"media_type"`     // Media type: movie / tv / anime
+	Title         string            `json:"title"`          // Official localized title
+	OriginalTitle string            `json:"original_title"` // Original language title
+	SortTitle     string            `json:"sort_title"`     // Sort title
+	Year          int               `json:"year"`           // Release year
+	Premiered     string            `json:"premiered"`      // Premiere date (YYYY-MM-DD)
+	Plot          string            `json:"plot"`           // Overview / plot summary
+	Rating        float64           `json:"rating"`         // Rating score (0.0 - 10.0)
+	Votes         int               `json:"votes"`          // Rating vote count
+	Genres        []string          `json:"genres"`         // Genre tags
+	Studios       []string          `json:"studios"`        // Production companies / studios
+	Directors     []string          `json:"directors"`      // Director names
+	Actors        []Actor           `json:"actors"`         // Principal cast list
+	PosterURL     string            `json:"poster_url"`     // Full poster image URL
+	BackdropURL   string            `json:"backdrop_url"`   // Full backdrop / fanart URL
+	Episodes      []EpisodeMetadata `json:"episodes"`       // Episodes metadata (for TV / anime series)
+}
 
-	// Episode-specific fields for TV shows and anime
-	Season        int     `json:"season"`         // Season number
-	Episode       int     `json:"episode"`        // Episode number
-	EpisodeTitle  string  `json:"episode_title"`  // Episode title
-	EpisodePlot   string  `json:"episode_plot"`   // Episode overview
-	EpisodeRating float64 `json:"episode_rating"` // Episode rating score
-	EpisodeAired  string  `json:"episode_aired"`  // Episode air date
-	EpisodeThumb  string  `json:"episode_thumb"`  // Episode still / thumbnail URL
+// ScrapeTask represents incoming parameters to scrape media metadata and write assets into target_dir.
+type ScrapeTask struct {
+	TargetDir  string `json:"target_dir"`            // Local directory containing the organized media files (required)
+	MediaType  string `json:"media_type,omitempty"`  // Media type: movie / tv / anime (optional)
+	Title      string `json:"title,omitempty"`       // Search or display title (optional, inferred from TargetDir if empty)
+	Year       int    `json:"year,omitempty"`        // Release year (optional)
+	TMDBID     int    `json:"tmdb_id,omitempty"`     // Direct TMDB ID if already known (optional)
+	Language   string `json:"language,omitempty"`    // Language code, e.g. "zh-CN" (default: "zh-CN")
+	SaveNFO    *bool  `json:"save_nfo,omitempty"`    // Whether to generate .nfo file (default: true)
+	SaveImages *bool  `json:"save_images,omitempty"` // Whether to download poster and backdrop (default: true)
+}
+
+// ScrapeResult represents the final outcome of a scraping operation.
+type ScrapeResult struct {
+	Success      bool           `json:"success"`
+	TargetDir    string         `json:"target_dir"`
+	Metadata     *MediaMetadata `json:"metadata,omitempty"`
+	CreatedFiles []string       `json:"created_files,omitempty"` // Paths of generated files (e.g. movie.nfo, poster.jpg)
+	Error        string         `json:"error,omitempty"`
 }

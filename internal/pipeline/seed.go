@@ -46,28 +46,29 @@ func SeedDefaultPipelines(ctx context.Context, repo *Repository) error {
 				},
 			},
 			{
-				ID:        "scraper",
-				Name:      "Scrape TMDB Metadata",
-				Component: "scraper",
-				Params: map[string]any{
-					"title":      "{{ steps.parser.title }}",
-					"year":       "{{ steps.parser.year }}",
-					"media_type": "{{ steps.parser.media_type }}",
-					"files":      "{{ steps.parser.files }}",
-				},
-			},
-			{
 				ID:        "organizer",
 				Name:      "Organize Media Files",
 				Component: "organizer",
 				Params: map[string]any{
 					"action":     "organize",
-					"media_type": "{{ steps.scraper.media_type }}",
-					"title":      "{{ steps.scraper.title }}",
-					"year":       "{{ steps.scraper.year }}",
+					"media_type": "{{ steps.parser.media_type }}",
+					"title":      "{{ steps.parser.title }}",
+					"year":       "{{ steps.parser.year }}",
 					"resolution": "{{ steps.parser.resolution }}",
 					"files":      "{{ steps.parser.files }}",
 				},
+			},
+			{
+				ID:        "scraper",
+				Name:      "Scrape TMDB Metadata",
+				Component: "scraper",
+				Params: map[string]any{
+					"target_dir": "{{ steps.organizer.target_dir }}",
+					"title":      "{{ steps.organizer.title }}",
+					"year":       "{{ steps.organizer.year }}",
+					"media_type": "{{ steps.organizer.media_type }}",
+				},
+				ContinueOnError: true,
 			},
 			{
 				ID:        "tag_done",
