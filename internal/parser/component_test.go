@@ -53,10 +53,10 @@ func TestParserComponentExecute_BindParams(t *testing.T) {
 		},
 	}
 
-	// 1. Single file parsing via title parameter
+	// 1. Single file parsing via raw_title parameter
 	sCtx := pipeline.NewStepContext("exec-1", 1, "step-1", "Step 1", comp.ID(), map[string]any{
-		"title": "Inception.2010.1080p.mkv",
-		"path":  "/downloads/Inception.2010.1080p.mkv",
+		"raw_title": "Inception.2010.1080p.mkv",
+		"path":      "/downloads/Inception.2010.1080p.mkv",
 	})
 
 	outputs, err := comp.Execute(context.Background(), sCtx)
@@ -73,10 +73,23 @@ func TestParserComponentExecute_BindParams(t *testing.T) {
 		t.Errorf("expected files to contain bound path, got %v", outputs["files"])
 	}
 
-	// 2. Multi-file parsing via explicit files array
+	// 2. Backward compatibility via legacy title parameter
+	legacyCtx := pipeline.NewStepContext("exec-1", 1, "step-legacy", "Legacy Step", comp.ID(), map[string]any{
+		"title": "Inception.2010.1080p.mkv",
+		"path":  "/downloads/Inception.2010.1080p.mkv",
+	})
+	legacyOutputs, err := comp.Execute(context.Background(), legacyCtx)
+	if err != nil {
+		t.Fatalf("unexpected execute error with legacy title: %v", err)
+	}
+	if legacyOutputs["title"] != "Inception.2010.1080p.mkv" {
+		t.Errorf("expected title Inception.2010.1080p.mkv, got %v", legacyOutputs["title"])
+	}
+
+	// 3. Multi-file parsing via explicit files array
 	multiCtx := pipeline.NewStepContext("exec-1", 1, "step-2", "Step 2", comp.ID(), map[string]any{
-		"title": "Breaking Bad",
-		"files": []string{"S01E01.mkv", "S01E02.mkv"},
+		"raw_title": "Breaking Bad",
+		"files":     []string{"S01E01.mkv", "S01E02.mkv"},
 	})
 
 	multiOutputs, err := comp.Execute(context.Background(), multiCtx)
@@ -92,10 +105,11 @@ func TestParserComponentExecute_BindParams(t *testing.T) {
 		t.Errorf("unexpected episode mapping: %+v", multiFiles)
 	}
 
-	// 3. Missing both title and path
+	// 4. Missing both raw_title and path
 	emptyCtx := pipeline.NewStepContext("exec-1", 1, "step-3", "Step 3", comp.ID(), map[string]any{})
 	_, err = comp.Execute(context.Background(), emptyCtx)
 	if err == nil {
 		t.Errorf("expected error on empty params, got nil")
 	}
 }
+

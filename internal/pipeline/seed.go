@@ -41,8 +41,8 @@ func SeedDefaultPipelines(ctx context.Context, repo *Repository) error {
 				Name:      "Parse Media Title",
 				Component: "parser",
 				Params: map[string]any{
-					"title": "{{ event.name }}",
-					"path":  "{{ event.content_path }}",
+					"raw_title": "{{ event.name }}",
+					"path":      "{{ event.content_path }}",
 				},
 			},
 			{

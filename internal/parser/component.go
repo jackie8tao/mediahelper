@@ -42,7 +42,7 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 		return nil, fmt.Errorf("bind parser params failed for '%s': %w", c.cfg.ID, err)
 	}
 
-	rawText := strings.TrimSpace(task.Title)
+	rawText := strings.TrimSpace(task.RawTitle)
 	path := strings.TrimSpace(task.Path)
 	files := task.Files
 
@@ -60,7 +60,7 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 	}
 
 	if rawText == "" {
-		return nil, fmt.Errorf("missing required parameter 'title' or 'path' for parser component '%s'", c.cfg.ID)
+		return nil, fmt.Errorf("missing required parameter 'raw_title' or 'path' for parser component '%s'", c.cfg.ID)
 	}
 
 	var (

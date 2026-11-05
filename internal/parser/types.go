@@ -1,5 +1,7 @@
 package parser
 
+import "encoding/json"
+
 // MediaType represents the category of a media resource.
 type MediaType string
 
@@ -18,9 +20,26 @@ type FileItem struct {
 
 // ParseTask represents incoming parameters for a media title or directory parsing step.
 type ParseTask struct {
-	Title string   `json:"title"` // Raw filename or torrent title to parse
-	Path  string   `json:"path"`  // Local filesystem directory or file path
-	Files []string `json:"files"` // Explicit list of relative video file paths (optional)
+	RawTitle string   `json:"raw_title"` // Raw filename or torrent title to parse
+	Path     string   `json:"path"`      // Local filesystem directory or file path
+	Files    []string `json:"files"`     // Explicit list of relative video file paths (optional)
+}
+
+// UnmarshalJSON supports unmarshaling from both "raw_title" and legacy "title".
+func (t *ParseTask) UnmarshalJSON(data []byte) error {
+	type alias ParseTask
+	var aux struct {
+		alias
+		LegacyTitle string `json:"title"`
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	*t = ParseTask(aux.alias)
+	if t.RawTitle == "" && aux.LegacyTitle != "" {
+		t.RawTitle = aux.LegacyTitle
+	}
+	return nil
 }
 
 // MediaInfo holds structured metadata extracted from a media filename, torrent title, or directory file list.
