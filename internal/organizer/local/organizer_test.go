@@ -142,4 +142,14 @@ func TestOrganizeErrors(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected error on empty title, got nil")
 	}
+
+	// Test invalid title with only illegal characters
+	_, err = org.Organize(context.Background(), organizer.OrganizeTask{
+		Title: "???***",
+		Files: []organizer.FileItem{{FilePath: "/tmp/test.mkv"}},
+	})
+	if err == nil {
+		t.Errorf("expected error on title with only illegal characters, got nil")
+	}
 }
+

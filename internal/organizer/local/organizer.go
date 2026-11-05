@@ -88,7 +88,9 @@ func (o *Organizer) Organize(ctx context.Context, task organizer.OrganizeTask) (
 
 	cleanTitle := sanitizeFilename(title)
 	if cleanTitle == "" {
-		cleanTitle = "Unknown"
+		err := fmt.Errorf("title contains only invalid characters: %q", title)
+		result.Error = err.Error()
+		return result, err
 	}
 
 	titleYear := cleanTitle
