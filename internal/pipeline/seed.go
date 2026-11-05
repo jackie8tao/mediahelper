@@ -53,8 +53,7 @@ func SeedDefaultPipelines(ctx context.Context, repo *Repository) error {
 					"title":      "{{ steps.parser.title }}",
 					"year":       "{{ steps.parser.year }}",
 					"media_type": "{{ steps.parser.media_type }}",
-					"season":     "{{ steps.parser.season }}",
-					"episode":    "{{ steps.parser.episode }}",
+					"files":      "{{ steps.parser.files }}",
 				},
 			},
 			{

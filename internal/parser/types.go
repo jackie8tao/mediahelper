@@ -27,10 +27,6 @@ type MediaInfo struct {
 	EnTitle string `json:"en_title"` // Cleaned English title (if present)
 	Year    int    `json:"year"`     // Release year (e.g. 2023, or 0 if unrecognized)
 
-	// Season and episode metadata (for single-file TV shows / anime)
-	Season  int `json:"season"`  // Season number (0 for movies, defaults to 1 for TV/anime)
-	Episode int `json:"episode"` // Episode number (0 for movies or multi-episode packs)
-
 	// Technical specification metadata
 	Resolution string `json:"resolution"`  // 4K, 1080p, 720p, 480p
 	Source     string `json:"source"`      // BluRay, WEB-DL, HDTV, Remux, DVD

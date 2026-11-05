@@ -93,12 +93,12 @@ var parseCmd = &cobra.Command{
 		} else {
 			info, err = p.Parse(context.Background(), raw)
 			if err == nil && targetPath != "" && !isDirPath {
-				info.Files = []parser.FileItem{
-					{
-						FilePath: targetPath,
-						Season:   info.Season,
-						Episode:  info.Episode,
-					},
+				if len(info.Files) > 0 {
+					info.Files[0].FilePath = targetPath
+				} else {
+					info.Files = []parser.FileItem{
+						{FilePath: targetPath},
+					}
 				}
 			}
 		}

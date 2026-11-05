@@ -74,12 +74,14 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 	} else {
 		info, err = c.parser.Parse(ctx, rawText)
 		if err == nil && path != "" && !isDirPath {
-			info.Files = []FileItem{
-				{
-					FilePath: path,
-					Season:   info.Season,
-					Episode:  info.Episode,
-				},
+			if len(info.Files) > 0 {
+				info.Files[0].FilePath = path
+			} else {
+				info.Files = []FileItem{
+					{
+						FilePath: path,
+					},
+				}
 			}
 		}
 	}
@@ -87,8 +89,8 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 		return nil, fmt.Errorf("parser '%s' failed to parse '%s': %w", c.cfg.ID, rawText, err)
 	}
 
-	sCtx.Logf("Parsed '%s' via %s -> Title='%s', Year=%d, Type=%s, S%02dE%02d, Files=%d",
-		rawText, c.parser.Name(), info.Title, info.Year, info.MediaType, info.Season, info.Episode, len(info.Files))
+	sCtx.Logf("Parsed '%s' via %s -> Title='%s', Year=%d, Type=%s, Files=%d",
+		rawText, c.parser.Name(), info.Title, info.Year, info.MediaType, len(info.Files))
 
 	outputs := map[string]any{
 		"media_info":  info,
@@ -97,8 +99,6 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 		"en_title":    info.EnTitle,
 		"year":        info.Year,
 		"media_type":  string(info.MediaType),
-		"season":      info.Season,
-		"episode":     info.Episode,
 		"resolution":  info.Resolution,
 		"source":      info.Source,
 		"video_codec": info.VideoCodec,

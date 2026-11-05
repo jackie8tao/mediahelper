@@ -24,17 +24,22 @@ Output strictly valid JSON matching this schema:
   "cn_title": "Clean Chinese title without season/episode/specs (empty string if none)",
   "en_title": "Clean English title without season/episode/specs (empty string if none)",
   "year": 2023,
-  "season": 0,
-  "episode": 0,
   "resolution": "4K | 1080p | 720p | 480p | empty string",
   "source": "Remux | BluRay | WEB-DL | HDTV | DVD | empty string",
   "video_codec": "HEVC | H.264 | AV1 | VC-1 | empty string",
-  "audio_codec": "Atmos | TrueHD | DTS-HD MA | DTS | DDP5.1 | AC3 | FLAC | AAC | empty string"
+  "audio_codec": "Atmos | TrueHD | DTS-HD MA | DTS | DDP5.1 | AC3 | FLAC | AAC | empty string",
+  "files": [
+    {
+      "file_path": "cleaned filename or empty string",
+      "season": 1,
+      "episode": 1
+    }
+  ]
 }
 
 Rules:
-1. For movies, set "media_type" to "movie", "season" to 0, and "episode" to 0.
-2. For TV shows or anime with season/episode indicators, set "season" (default 1 if unspecified) and "episode".
+1. For movies, set "media_type" to "movie", and "files" can have season=0, episode=0 or be an empty list.
+2. For TV shows or anime with season/episode indicators, include an entry in "files" with "season" (default 1 if unspecified) and "episode".
 3. If a numeric title like "1917" appears alongside a release year like "2019", "1917" is the title and 2019 is the year.
 4. Strip all technical tags, brackets, noise words, and file extensions from title fields.`
 
@@ -48,8 +53,6 @@ Output strictly valid JSON matching this schema:
   "cn_title": "Clean Chinese title without season/episode/specs (empty string if none)",
   "en_title": "Clean English title without season/episode/specs (empty string if none)",
   "year": 2023,
-  "season": 1,
-  "episode": 0,
   "resolution": "4K | 1080p | 720p | 480p | empty string",
   "source": "Remux | BluRay | WEB-DL | HDTV | DVD | empty string",
   "video_codec": "HEVC | H.264 | AV1 | VC-1 | empty string",
@@ -66,8 +69,7 @@ Output strictly valid JSON matching this schema:
 Rules:
 1. Keep every "file_path" field in "files" identical to the input file path string.
 2. Only include main episode video files in "files" (with season >= 1 and episode >= 1). Exclude non-episode extras such as NCOP, NCED, OP, ED, PV, CM, Menu, Preview, Trailer, Sample, or bonus interviews.
-3. Do not confuse numeric words in the series title (e.g. "86", "1923"), video resolution ("1080p", "2160p"), bit depth ("10bit"), or 8-character CRC32 hashes (e.g. "[A1B2C3D4]") with episode numbers.
-4. If there is only a single episode file, also set top-level "season" and "episode" to match that file; if there are multiple episodes, set top-level "episode" to 0.`
+3. Do not confuse numeric words in the series title (e.g. "86", "1923"), video resolution ("1080p", "2160p"), bit depth ("10bit"), or 8-character CRC32 hashes (e.g. "[A1B2C3D4]") with episode numbers.`
 )
 
 // Config holds connection and model parameters for a DeepSeek parser instance.
@@ -235,10 +237,6 @@ func (c *Client) ParseFiles(ctx context.Context, rawTitle string, files []string
 		} else if info.EnTitle != "" {
 			info.Title = info.EnTitle
 		}
-	}
-	if len(info.Files) == 1 && info.Episode == 0 {
-		info.Season = info.Files[0].Season
-		info.Episode = info.Files[0].Episode
 	}
 
 	return &info, nil
