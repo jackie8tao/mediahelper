@@ -37,9 +37,14 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 		return nil, fmt.Errorf("step context cannot be nil for parser component '%s'", c.cfg.ID)
 	}
 
-	rawText := strings.TrimSpace(sCtx.GetStringParam("title", ""))
-	path := strings.TrimSpace(sCtx.GetStringParam("path", ""))
-	files := sCtx.GetStringSliceParam("files")
+	var task ParseTask
+	if err := sCtx.BindParams(&task); err != nil {
+		return nil, fmt.Errorf("bind parser params failed for '%s': %w", c.cfg.ID, err)
+	}
+
+	rawText := strings.TrimSpace(task.Title)
+	path := strings.TrimSpace(task.Path)
+	files := task.Files
 
 	var isDirPath bool
 	if path != "" {

@@ -16,6 +16,13 @@ type FileItem struct {
 	Episode  int    `json:"episode"`   // Episode number (1+)
 }
 
+// ParseTask represents incoming parameters for a media title or directory parsing step.
+type ParseTask struct {
+	Title string   `json:"title"` // Raw filename or torrent title to parse
+	Path  string   `json:"path"`  // Local filesystem directory or file path
+	Files []string `json:"files"` // Explicit list of relative video file paths (optional)
+}
+
 // MediaInfo holds structured metadata extracted from a media filename, torrent title, or directory file list.
 type MediaInfo struct {
 	OriginalText string    `json:"original_text"` // Raw input filename or torrent title
