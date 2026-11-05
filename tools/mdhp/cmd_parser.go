@@ -45,12 +45,16 @@ var parseCmd = &cobra.Command{
 			raw = strings.TrimSpace(args[0])
 		}
 
-		var relFiles []string
+		var (
+			relFiles  []string
+			isDirPath bool
+		)
 		if targetPath != "" {
 			if raw == "" {
 				raw = filepath.Base(targetPath)
 			}
 			if fi, err := os.Stat(targetPath); err == nil && fi.IsDir() {
+				isDirPath = true
 				relFiles, _ = parser.ScanRelativeVideoFiles(targetPath)
 			}
 		}
@@ -79,8 +83,24 @@ var parseCmd = &cobra.Command{
 		var info *parser.MediaInfo
 		if len(relFiles) > 0 {
 			info, err = p.ParseFiles(context.Background(), raw, relFiles)
+			if err == nil && isDirPath {
+				for i := range info.Files {
+					if info.Files[i].File != "" && !filepath.IsAbs(info.Files[i].File) {
+						info.Files[i].File = filepath.Join(targetPath, filepath.FromSlash(info.Files[i].File))
+					}
+				}
+			}
 		} else {
 			info, err = p.Parse(context.Background(), raw)
+			if err == nil && targetPath != "" && !isDirPath {
+				info.Files = []parser.EpisodeFile{
+					{
+						File:    targetPath,
+						Season:  info.Season,
+						Episode: info.Episode,
+					},
+				}
+			}
 		}
 		if err != nil {
 			return fmt.Errorf("parse failed: %w", err)

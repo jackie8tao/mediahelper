@@ -64,7 +64,7 @@ func (c *Client) Name() string {
 	return "LocalOrganizer"
 }
 
-// Organize transfers or links media files from task.SourcePath into the target library directory.
+// Organize transfers or links media files specified in task.Files into the target library directory.
 func (c *Client) Organize(ctx context.Context, task organizer.OrganizeTask) (*organizer.OrganizeResult, error) {
 	result := &organizer.OrganizeResult{}
 
@@ -73,16 +73,28 @@ func (c *Client) Organize(ctx context.Context, task organizer.OrganizeTask) (*or
 		return result, err
 	}
 
-	srcPath := strings.TrimSpace(task.SourcePath)
-	if srcPath == "" {
-		err := fmt.Errorf("source_path cannot be empty")
+	if len(task.Files) == 0 {
+		err := fmt.Errorf("files list cannot be empty")
 		result.Error = err.Error()
 		return result, err
 	}
 
-	srcFi, err := os.Stat(srcPath)
-	if err != nil {
-		result.Error = fmt.Sprintf("stat source path error: %v", err)
+	// Filter and validate eligible video files from task.Files
+	var validItems []organizer.EpisodeFileItem
+	for _, item := range task.Files {
+		filePath := strings.TrimSpace(item.File)
+		if filePath == "" {
+			continue
+		}
+		if c.isVideoFile(filePath) {
+			item.File = filePath
+			validItems = append(validItems, item)
+		}
+	}
+
+	if len(validItems) == 0 {
+		err := fmt.Errorf("no eligible video files found in task files")
+		result.Error = err.Error()
 		return result, err
 	}
 
@@ -100,7 +112,7 @@ func (c *Client) Organize(ctx context.Context, task organizer.OrganizeTask) (*or
 
 	title := strings.TrimSpace(task.Title)
 	if title == "" {
-		baseName := filepath.Base(srcPath)
+		baseName := filepath.Base(validItems[0].File)
 		title = strings.TrimSuffix(baseName, filepath.Ext(baseName))
 	}
 
@@ -119,25 +131,11 @@ func (c *Client) Organize(ctx context.Context, task organizer.OrganizeTask) (*or
 		linkMode = organizer.LinkModeHardlink
 	}
 
-	// Collect eligible video files from source path
-	var videoFiles []string
-	if srcFi.IsDir() {
-		videoFiles = c.scanVideoFiles(srcPath)
-	} else if c.isVideoFile(srcPath) {
-		videoFiles = append(videoFiles, srcPath)
-	}
-
-	if len(videoFiles) == 0 {
-		err := fmt.Errorf("no eligible video files found in '%s'", srcPath)
-		result.Error = err.Error()
-		return result, err
-	}
-
 	if mediaType == "movie" {
 		movieDir := filepath.Join(baseTargetDir, titleYear)
 		result.TargetDir = movieDir
 
-		mainVideo := c.findMainVideoFile(videoFiles)
+		mainVideo := c.findMainVideoFile(validItems)
 		ext := filepath.Ext(mainVideo)
 
 		targetFileName := titleYear
@@ -160,72 +158,29 @@ func (c *Client) Organize(ctx context.Context, task organizer.OrganizeTask) (*or
 		showDir := filepath.Join(baseTargetDir, titleYear)
 		result.TargetDir = showDir
 
-		// Build episode items to process:
-		// 1. If LLM-parsed task.Files mappings are provided, use them directly.
-		// 2. If there is only a single video file, use task.Season and task.Episode.
-		// 3. If a directory contains multiple video files without task.Files, return an error instead of guessing.
-		var items []organizer.EpisodeFileItem
-		if len(task.Files) > 0 {
-			for _, item := range task.Files {
-				if strings.TrimSpace(item.File) == "" || item.Episode <= 0 {
-					continue
-				}
-				vPath := item.File
-				if !filepath.IsAbs(vPath) && srcFi.IsDir() {
-					vPath = filepath.Join(srcPath, filepath.FromSlash(item.File))
-				}
-				if !c.isVideoFile(vPath) {
-					continue
-				}
-				season := item.Season
-				if season <= 0 {
-					if task.Season > 0 {
-						season = task.Season
-					} else {
-						season = 1
-					}
-				}
-				epTitle := item.EpisodeTitle
-				if epTitle == "" && len(task.Files) == 1 {
-					epTitle = task.EpisodeTitle
-				}
-				items = append(items, organizer.EpisodeFileItem{
-					File:         vPath,
-					Season:       season,
-					Episode:      item.Episode,
-					EpisodeTitle: epTitle,
-				})
-			}
-		} else if len(videoFiles) == 1 {
-			season := task.Season
+		for _, item := range validItems {
+			season := item.Season
 			if season <= 0 {
 				season = 1
 			}
-			episode := task.Episode
+			episode := item.Episode
 			if episode <= 0 {
-				episode = 1
+				if len(validItems) == 1 {
+					episode = 1
+				} else {
+					slog.Warn("Skipping episode file with missing episode number", "file", item.File)
+					continue
+				}
 			}
-			items = append(items, organizer.EpisodeFileItem{
-				File:         videoFiles[0],
-				Season:       season,
-				Episode:      episode,
-				EpisodeTitle: task.EpisodeTitle,
-			})
-		} else {
-			err := fmt.Errorf("directory '%s' contains %d video files; LLM-parsed 'files' mapping is required for multi-episode season pack organization", srcPath, len(videoFiles))
-			result.Error = err.Error()
-			return result, err
-		}
 
-		for _, item := range items {
-			seasonDir := filepath.Join(showDir, fmt.Sprintf("Season %02d", item.Season))
+			seasonDir := filepath.Join(showDir, fmt.Sprintf("Season %02d", season))
 			ext := filepath.Ext(item.File)
 
 			var episodeFileName string
 			if epTitle := sanitizeFilename(item.EpisodeTitle); epTitle != "" {
-				episodeFileName = fmt.Sprintf("%s - S%02dE%02d - %s%s", cleanTitle, item.Season, item.Episode, epTitle, ext)
+				episodeFileName = fmt.Sprintf("%s - S%02dE%02d - %s%s", cleanTitle, season, episode, epTitle, ext)
 			} else {
-				episodeFileName = fmt.Sprintf("%s - S%02dE%02d%s", cleanTitle, item.Season, item.Episode, ext)
+				episodeFileName = fmt.Sprintf("%s - S%02dE%02d%s", cleanTitle, season, episode, ext)
 			}
 
 			targetFilePath := filepath.Join(seasonDir, episodeFileName)
@@ -268,7 +223,7 @@ func (c *Client) isVideoFile(path string) bool {
 	}
 
 	fi, err := os.Stat(path)
-	if err != nil {
+	if err != nil || fi.IsDir() {
 		return false
 	}
 
@@ -278,32 +233,18 @@ func (c *Client) isVideoFile(path string) bool {
 	return true
 }
 
-func (c *Client) scanVideoFiles(dir string) []string {
-	var files []string
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
-			return nil
-		}
-		if c.isVideoFile(path) {
-			files = append(files, path)
-		}
-		return nil
-	})
-	return files
-}
-
-func (c *Client) findMainVideoFile(files []string) string {
-	if len(files) == 0 {
+func (c *Client) findMainVideoFile(items []organizer.EpisodeFileItem) string {
+	if len(items) == 0 {
 		return ""
 	}
 	var largestFile string
 	var maxSize int64 = -1
 
-	for _, f := range files {
-		fi, err := os.Stat(f)
+	for _, item := range items {
+		fi, err := os.Stat(item.File)
 		if err == nil && fi.Size() > maxSize {
 			maxSize = fi.Size()
-			largestFile = f
+			largestFile = item.File
 		}
 	}
 	return largestFile

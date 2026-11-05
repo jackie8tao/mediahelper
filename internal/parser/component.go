@@ -41,12 +41,14 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 	path := strings.TrimSpace(sCtx.GetStringParam("path", ""))
 	files := sCtx.GetStringSliceParam("files")
 
+	var isDirPath bool
 	if path != "" {
 		if rawText == "" {
 			rawText = filepath.Base(path)
 		}
-		if len(files) == 0 {
-			if fi, err := os.Stat(path); err == nil && fi.IsDir() {
+		if fi, err := os.Stat(path); err == nil && fi.IsDir() {
+			isDirPath = true
+			if len(files) == 0 {
 				files, _ = ScanRelativeVideoFiles(path)
 			}
 		}
@@ -62,8 +64,24 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 	)
 	if len(files) > 0 {
 		info, err = c.parser.ParseFiles(ctx, rawText, files)
+		if err == nil && isDirPath {
+			for i := range info.Files {
+				if info.Files[i].File != "" && !filepath.IsAbs(info.Files[i].File) {
+					info.Files[i].File = filepath.Join(path, filepath.FromSlash(info.Files[i].File))
+				}
+			}
+		}
 	} else {
 		info, err = c.parser.Parse(ctx, rawText)
+		if err == nil && path != "" && !isDirPath {
+			info.Files = []EpisodeFile{
+				{
+					File:    path,
+					Season:  info.Season,
+					Episode: info.Episode,
+				},
+			}
+		}
 	}
 	if err != nil {
 		return nil, fmt.Errorf("parser '%s' failed to parse '%s': %w", c.cfg.ID, rawText, err)

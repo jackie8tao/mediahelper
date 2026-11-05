@@ -10,25 +10,21 @@ const (
 	LinkModeSymlink  LinkMode = "symlink"  // Symbolic link
 )
 
-// EpisodeFileItem represents an explicit file-to-episode mapping for multi-file season pack organization.
+// EpisodeFileItem represents a source video file and its associated episode metadata.
 type EpisodeFileItem struct {
-	File         string `json:"file"`                    // Relative file path within SourcePath (or absolute file path)
-	Season       int    `json:"season"`                  // Season number (1+)
-	Episode      int    `json:"episode"`                 // Episode number (1+)
+	File         string `json:"file"`                    // Full path to the source video file
+	Season       int    `json:"season,omitempty"`        // Season number (1+ for TV/anime, 0 for movies)
+	Episode      int    `json:"episode,omitempty"`       // Episode number (1+ for TV/anime, 0 for movies)
 	EpisodeTitle string `json:"episode_title,omitempty"` // Optional episode title
 }
 
 // OrganizeTask represents an incoming media file organization task request.
 type OrganizeTask struct {
-	SourcePath   string            `json:"source_path"`             // Absolute local path to the source media file or directory
-	MediaType    string            `json:"media_type"`              // Media category: movie / tv / anime
-	Title        string            `json:"title"`                   // Primary media title used for directory and file naming
-	Year         int               `json:"year"`                    // Release year
-	Season       int               `json:"season,omitempty"`        // Season number (for single-episode TV / anime)
-	Episode      int               `json:"episode,omitempty"`       // Episode number (for single-episode TV / anime)
-	EpisodeTitle string            `json:"episode_title,omitempty"` // Optional episode title
-	Resolution   string            `json:"resolution,omitempty"`    // Optional video resolution tag (e.g. 1080p, 4K)
-	Files        []EpisodeFileItem `json:"files,omitempty"`         // LLM-parsed file-to-episode mappings for multi-file directories
+	MediaType  string            `json:"media_type"`           // Media category: movie / tv / anime
+	Title      string            `json:"title"`                // Primary media title used for directory and file naming
+	Year       int               `json:"year"`                 // Release year
+	Resolution string            `json:"resolution,omitempty"` // Optional video resolution tag (e.g. 1080p, 4K)
+	Files      []EpisodeFileItem `json:"files"`                // Source video file items to organize
 }
 
 // FilePair records the source-to-target file mapping after organization.

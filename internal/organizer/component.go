@@ -57,20 +57,20 @@ func (c *OrganizerComponent) execOrganize(ctx context.Context, sCtx *pipeline.St
 		return nil, fmt.Errorf("bind organizer params failed for '%s': %w", c.cfg.ID, err)
 	}
 
-	if strings.TrimSpace(task.SourcePath) == "" {
-		return nil, fmt.Errorf("missing required parameter 'source_path' for organizer component '%s'", c.cfg.ID)
+	if len(task.Files) == 0 {
+		return nil, fmt.Errorf("missing required parameter 'files' for organizer component '%s'", c.cfg.ID)
 	}
 
 	res, err := c.organizer.Organize(ctx, task)
 	if err != nil {
-		return nil, fmt.Errorf("organizer '%s' failed for '%s': %w", c.cfg.ID, task.SourcePath, err)
+		return nil, fmt.Errorf("organizer '%s' failed for '%s': %w", c.cfg.ID, task.Title, err)
 	}
 	if res == nil {
 		res = &OrganizeResult{}
 	}
 
-	sCtx.Logf("Organized '%s' via %s -> TargetDir='%s', LinkedFiles=%d, Success=%v",
-		task.SourcePath, c.organizer.Name(), res.TargetDir, len(res.LinkedFiles), res.Success)
+	sCtx.Logf("Organized '%s' (%d input files) via %s -> TargetDir='%s', LinkedFiles=%d, Success=%v",
+		task.Title, len(task.Files), c.organizer.Name(), res.TargetDir, len(res.LinkedFiles), res.Success)
 
 	return map[string]any{
 		"action":          ActionOrganize,
@@ -79,12 +79,10 @@ func (c *OrganizerComponent) execOrganize(ctx context.Context, sCtx *pipeline.St
 		"target_dir":      res.TargetDir,
 		"linked_files":    res.LinkedFiles,
 		"file_count":      len(res.LinkedFiles),
-		"source_path":     task.SourcePath,
 		"media_type":      task.MediaType,
 		"title":           task.Title,
 		"year":            task.Year,
-		"season":          task.Season,
-		"episode":         task.Episode,
+		"files":           task.Files,
 	}, nil
 }
 
