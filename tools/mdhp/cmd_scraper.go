@@ -109,3 +109,4 @@ func init() {
 	scraperCmd.AddCommand(scrapeCmd)
 	rootCmd.AddCommand(scraperCmd)
 }
+

@@ -278,3 +278,4 @@ func TestTMDBScrapeValidationErrors(t *testing.T) {
 		t.Errorf("expected error on non-existent directory, got nil")
 	}
 }
+

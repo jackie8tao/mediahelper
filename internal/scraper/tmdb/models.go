@@ -158,3 +158,4 @@ type episodeNFO struct {
 	Aired     string        `xml:"aired,omitempty"`
 	UniqueIDs []nfoUniqueID `xml:"uniqueid,omitempty"`
 }
+

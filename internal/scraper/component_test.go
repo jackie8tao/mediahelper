@@ -84,3 +84,4 @@ func TestScraperComponent_NilTarget(t *testing.T) {
 		t.Errorf("expected error on empty target_dir, got nil")
 	}
 }
+
