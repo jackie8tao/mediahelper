@@ -43,29 +43,31 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 		return nil, fmt.Errorf("bind parser params failed for '%s': %w", c.cfg.ID, err)
 	}
 
-	rawText := strings.TrimSpace(task.RawTitle)
 	path := strings.TrimSpace(task.Path)
-	files := task.Files
-
-	var isDirPath bool
-	if path != "" {
-		if rawText == "" {
-			rawText = filepath.Base(path)
-		}
-		if fi, err := os.Stat(path); err == nil && fi.IsDir() {
-			isDirPath = true
-			if len(files) == 0 {
-				scanned, scanErr := scanRelativeVideoFiles(path)
-				if scanErr != nil {
-					return nil, fmt.Errorf("scan directory files failed for '%s': %w", path, scanErr)
-				}
-				files = scanned
-			}
-		}
+	if path == "" {
+		return nil, fmt.Errorf("missing required parameter 'path' for parser component '%s'", c.cfg.ID)
 	}
 
+	// Priority 1: RawTitle from task; Priority 2: base name extracted from path.
+	rawText := strings.TrimSpace(task.RawTitle)
 	if rawText == "" {
-		return nil, fmt.Errorf("missing required parameter 'raw_title' or 'path' for parser component '%s'", c.cfg.ID)
+		rawText = filepath.Base(path)
+	}
+	if rawText == "" || rawText == "." || rawText == "/" {
+		return nil, fmt.Errorf("cannot extract valid media title from 'raw_title' or 'path' for parser component '%s'", c.cfg.ID)
+	}
+
+	files := task.Files
+	var isDirPath bool
+	if fi, err := os.Stat(path); err == nil && fi.IsDir() {
+		isDirPath = true
+		if len(files) == 0 {
+			scanned, scanErr := scanRelativeVideoFiles(path)
+			if scanErr != nil {
+				return nil, fmt.Errorf("scan directory files failed for '%s': %w", path, scanErr)
+			}
+			files = scanned
+		}
 	}
 
 	var (
