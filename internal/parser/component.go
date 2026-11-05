@@ -55,7 +55,7 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 		if fi, err := os.Stat(path); err == nil && fi.IsDir() {
 			isDirPath = true
 			if len(files) == 0 {
-				files, _ = ScanRelativeVideoFiles(path)
+				files, _ = scanRelativeVideoFiles(path)
 			}
 		}
 	}
@@ -115,8 +115,8 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 	return outputs, nil
 }
 
-// ScanRelativeVideoFiles walks a directory and returns relative paths of all video files inside it.
-func ScanRelativeVideoFiles(rootDir string) ([]string, error) {
+// scanRelativeVideoFiles walks a directory and returns relative paths of all video files inside it.
+func scanRelativeVideoFiles(rootDir string) ([]string, error) {
 	var relFiles []string
 	err := filepath.Walk(rootDir, func(p string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {

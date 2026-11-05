@@ -55,7 +55,7 @@ var parseCmd = &cobra.Command{
 			}
 			if fi, err := os.Stat(targetPath); err == nil && fi.IsDir() {
 				isDirPath = true
-				relFiles, _ = parser.ScanRelativeVideoFiles(targetPath)
+				relFiles, _ = scanRelativeVideoFiles(targetPath)
 			}
 		}
 
@@ -126,4 +126,29 @@ func init() {
 
 	parserCmd.AddCommand(parseCmd)
 	rootCmd.AddCommand(parserCmd)
+}
+
+var videoExtensions = map[string]bool{
+	".mkv": true, ".mp4": true, ".avi": true, ".ts": true,
+	".mov": true, ".wmv": true, ".m2ts": true, ".flv": true,
+}
+
+func scanRelativeVideoFiles(rootDir string) ([]string, error) {
+	var relFiles []string
+	err := filepath.Walk(rootDir, func(p string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(info.Name()))
+		if !videoExtensions[ext] {
+			return nil
+		}
+		rel, relErr := filepath.Rel(rootDir, p)
+		if relErr != nil {
+			rel = info.Name()
+		}
+		relFiles = append(relFiles, filepath.ToSlash(rel))
+		return nil
+	})
+	return relFiles, err
 }
