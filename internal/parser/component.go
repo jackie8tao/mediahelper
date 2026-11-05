@@ -66,19 +66,19 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 		info, err = c.parser.ParseFiles(ctx, rawText, files)
 		if err == nil && isDirPath {
 			for i := range info.Files {
-				if info.Files[i].File != "" && !filepath.IsAbs(info.Files[i].File) {
-					info.Files[i].File = filepath.Join(path, filepath.FromSlash(info.Files[i].File))
+				if info.Files[i].FilePath != "" && !filepath.IsAbs(info.Files[i].FilePath) {
+					info.Files[i].FilePath = filepath.Join(path, filepath.FromSlash(info.Files[i].FilePath))
 				}
 			}
 		}
 	} else {
 		info, err = c.parser.Parse(ctx, rawText)
 		if err == nil && path != "" && !isDirPath {
-			info.Files = []EpisodeFile{
+			info.Files = []FileItem{
 				{
-					File:    path,
-					Season:  info.Season,
-					Episode: info.Episode,
+					FilePath: path,
+					Season:   info.Season,
+					Episode:  info.Episode,
 				},
 			}
 		}

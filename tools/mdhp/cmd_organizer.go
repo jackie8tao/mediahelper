@@ -38,14 +38,14 @@ var (
 var organizeCmd = &cobra.Command{
 	Use:   "organize [flags]",
 	Short: "Organize media file(s) into standardized library directory structures",
-	Example: `  mdhp organizer organize --movie-dir ./tests/library/movies -m movie --title "盗梦空间" -y 2010 -r 1080p --files '[{"file":"./tests/src/Inception.2010.1080p.mkv"}]'
-  mdhp organizer organize --tv-dir ./tests/library/tv -m tv --title "葬送的芙莉莲" -y 2023 --files '[{"file":"./tests/src/01.mkv","season":1,"episode":1},{"file":"./tests/src/02.mkv","season":1,"episode":2}]'`,
+	Example: `  mdhp organizer organize --movie-dir ./tests/library/movies -m movie --title "盗梦空间" -y 2010 -r 1080p --files '[{"file_path":"./tests/src/Inception.2010.1080p.mkv"}]'
+  mdhp organizer organize --tv-dir ./tests/library/tv -m tv --title "葬送的芙莉莲" -y 2023 --files '[{"file_path":"./tests/src/01.mkv","season":1,"episode":1},{"file_path":"./tests/src/02.mkv","season":1,"episode":2}]'`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if strings.TrimSpace(orgFilesJSON) == "" {
 			return fmt.Errorf("--files JSON array is required")
 		}
 
-		var parsedFiles []organizer.EpisodeFileItem
+		var parsedFiles []organizer.FileItem
 		if err := json.Unmarshal([]byte(orgFilesJSON), &parsedFiles); err != nil {
 			return fmt.Errorf("unmarshal --files JSON failed: %w", err)
 		}
@@ -106,7 +106,7 @@ func init() {
 	organizeCmd.Flags().StringVar(&orgTitle, "title", "", "Primary media title")
 	organizeCmd.Flags().IntVarP(&orgYear, "year", "y", 0, "Release year")
 	organizeCmd.Flags().StringVarP(&orgResolution, "resolution", "r", "", "Video resolution tag (e.g. 1080p, 4K)")
-	organizeCmd.Flags().StringVarP(&orgFilesJSON, "files", "f", "", "JSON array of EpisodeFileItem objects to organize")
+	organizeCmd.Flags().StringVarP(&orgFilesJSON, "files", "f", "", "JSON array of FileItem objects to organize")
 
 	organizerCmd.AddCommand(organizeCmd)
 	rootCmd.AddCommand(organizerCmd)

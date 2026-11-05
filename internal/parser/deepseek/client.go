@@ -56,7 +56,7 @@ Output strictly valid JSON matching this schema:
   "audio_codec": "Atmos | TrueHD | DTS-HD MA | DTS | DDP5.1 | AC3 | FLAC | AAC | empty string",
   "files": [
     {
-      "file": "exact file path string from input list",
+      "file_path": "exact file path string from input list",
       "season": 1,
       "episode": 1
     }
@@ -64,7 +64,7 @@ Output strictly valid JSON matching this schema:
 }
 
 Rules:
-1. Keep every "file" field in "files" identical to the input file path string.
+1. Keep every "file_path" field in "files" identical to the input file path string.
 2. Only include main episode video files in "files" (with season >= 1 and episode >= 1). Exclude non-episode extras such as NCOP, NCED, OP, ED, PV, CM, Menu, Preview, Trailer, Sample, or bonus interviews.
 3. Do not confuse numeric words in the series title (e.g. "86", "1923"), video resolution ("1080p", "2160p"), bit depth ("10bit"), or 8-character CRC32 hashes (e.g. "[A1B2C3D4]") with episode numbers.
 4. If there is only a single episode file, also set top-level "season" and "episode" to match that file; if there are multiple episodes, set top-level "episode" to 0.`

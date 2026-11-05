@@ -80,14 +80,14 @@ func (c *Client) Organize(ctx context.Context, task organizer.OrganizeTask) (*or
 	}
 
 	// Filter and validate eligible video files from task.Files
-	var validItems []organizer.EpisodeFileItem
+	var validItems []organizer.FileItem
 	for _, item := range task.Files {
-		filePath := strings.TrimSpace(item.File)
+		filePath := strings.TrimSpace(item.FilePath)
 		if filePath == "" {
 			continue
 		}
 		if c.isVideoFile(filePath) {
-			item.File = filePath
+			item.FilePath = filePath
 			validItems = append(validItems, item)
 		}
 	}
@@ -112,7 +112,7 @@ func (c *Client) Organize(ctx context.Context, task organizer.OrganizeTask) (*or
 
 	title := strings.TrimSpace(task.Title)
 	if title == "" {
-		baseName := filepath.Base(validItems[0].File)
+		baseName := filepath.Base(validItems[0].FilePath)
 		title = strings.TrimSuffix(baseName, filepath.Ext(baseName))
 	}
 
@@ -168,13 +168,13 @@ func (c *Client) Organize(ctx context.Context, task organizer.OrganizeTask) (*or
 				if len(validItems) == 1 {
 					episode = 1
 				} else {
-					slog.Warn("Skipping episode file with missing episode number", "file", item.File)
+					slog.Warn("Skipping episode file with missing episode number", "file", item.FilePath)
 					continue
 				}
 			}
 
 			seasonDir := filepath.Join(showDir, fmt.Sprintf("Season %02d", season))
-			ext := filepath.Ext(item.File)
+			ext := filepath.Ext(item.FilePath)
 
 			var episodeFileName string
 			if epTitle := sanitizeFilename(item.EpisodeTitle); epTitle != "" {
@@ -185,16 +185,16 @@ func (c *Client) Organize(ctx context.Context, task organizer.OrganizeTask) (*or
 
 			targetFilePath := filepath.Join(seasonDir, episodeFileName)
 
-			if err := transferFile(item.File, targetFilePath, linkMode); err != nil {
-				slog.Error("Transfer episode file failed", "src", item.File, "dst", targetFilePath, "error", err)
+			if err := transferFile(item.FilePath, targetFilePath, linkMode); err != nil {
+				slog.Error("Transfer episode file failed", "src", item.FilePath, "dst", targetFilePath, "error", err)
 				continue
 			}
 			result.LinkedFiles = append(result.LinkedFiles, organizer.FilePair{
-				Source: item.File,
+				Source: item.FilePath,
 				Target: targetFilePath,
 			})
 
-			c.transferSubtitles(item.File, targetFilePath, linkMode, result)
+			c.transferSubtitles(item.FilePath, targetFilePath, linkMode, result)
 		}
 	}
 
@@ -233,7 +233,7 @@ func (c *Client) isVideoFile(path string) bool {
 	return true
 }
 
-func (c *Client) findMainVideoFile(items []organizer.EpisodeFileItem) string {
+func (c *Client) findMainVideoFile(items []organizer.FileItem) string {
 	if len(items) == 0 {
 		return ""
 	}
@@ -241,10 +241,10 @@ func (c *Client) findMainVideoFile(items []organizer.EpisodeFileItem) string {
 	var maxSize int64 = -1
 
 	for _, item := range items {
-		fi, err := os.Stat(item.File)
+		fi, err := os.Stat(item.FilePath)
 		if err == nil && fi.Size() > maxSize {
 			maxSize = fi.Size()
-			largestFile = item.File
+			largestFile = item.FilePath
 		}
 	}
 	return largestFile

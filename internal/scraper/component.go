@@ -15,10 +15,10 @@ type ScraperComponent struct {
 	cfg     config.ScraperComponentConfig
 }
 
-func (c *ScraperComponent) ID() string                           { return c.cfg.ID }
-func (c *ScraperComponent) Name() string                         { return c.cfg.Name }
-func (c *ScraperComponent) Description() string                  { return c.cfg.Description }
-func (c *ScraperComponent) Scraper() Scraper                     { return c.scraper }
+func (c *ScraperComponent) ID() string                            { return c.cfg.ID }
+func (c *ScraperComponent) Name() string                          { return c.cfg.Name }
+func (c *ScraperComponent) Description() string                   { return c.cfg.Description }
+func (c *ScraperComponent) Scraper() Scraper                      { return c.scraper }
 func (c *ScraperComponent) Config() config.ScraperComponentConfig { return c.cfg }
 
 // Execute handles scraper operations within a pipeline step.

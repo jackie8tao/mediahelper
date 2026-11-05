@@ -10,9 +10,9 @@ const (
 	LinkModeSymlink  LinkMode = "symlink"  // Symbolic link
 )
 
-// EpisodeFileItem represents a source video file and its associated episode metadata.
-type EpisodeFileItem struct {
-	File         string `json:"file"`                    // Full path to the source video file
+// FileItem represents a source media file (movie or episode) to be organized, with optional episode metadata.
+type FileItem struct {
+	FilePath     string `json:"file_path"`               // Full path to the source media file
 	Season       int    `json:"season,omitempty"`        // Season number (1+ for TV/anime, 0 for movies)
 	Episode      int    `json:"episode,omitempty"`       // Episode number (1+ for TV/anime, 0 for movies)
 	EpisodeTitle string `json:"episode_title,omitempty"` // Optional episode title
@@ -20,11 +20,11 @@ type EpisodeFileItem struct {
 
 // OrganizeTask represents an incoming media file organization task request.
 type OrganizeTask struct {
-	MediaType  string            `json:"media_type"`           // Media category: movie / tv / anime
-	Title      string            `json:"title"`                // Primary media title used for directory and file naming
-	Year       int               `json:"year"`                 // Release year
-	Resolution string            `json:"resolution,omitempty"` // Optional video resolution tag (e.g. 1080p, 4K)
-	Files      []EpisodeFileItem `json:"files"`                // Source video file items to organize
+	MediaType  string     `json:"media_type"`           // Media category: movie / tv / anime
+	Title      string     `json:"title"`                // Primary media title used for directory and file naming
+	Year       int        `json:"year"`                 // Release year
+	Resolution string     `json:"resolution,omitempty"` // Optional video resolution tag (e.g. 1080p, 4K)
+	Files      []FileItem `json:"files"`                // Source video file items to organize
 }
 
 // FilePair records the source-to-target file mapping after organization.

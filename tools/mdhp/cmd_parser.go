@@ -85,19 +85,19 @@ var parseCmd = &cobra.Command{
 			info, err = p.ParseFiles(context.Background(), raw, relFiles)
 			if err == nil && isDirPath {
 				for i := range info.Files {
-					if info.Files[i].File != "" && !filepath.IsAbs(info.Files[i].File) {
-						info.Files[i].File = filepath.Join(targetPath, filepath.FromSlash(info.Files[i].File))
+					if info.Files[i].FilePath != "" && !filepath.IsAbs(info.Files[i].FilePath) {
+						info.Files[i].FilePath = filepath.Join(targetPath, filepath.FromSlash(info.Files[i].FilePath))
 					}
 				}
 			}
 		} else {
 			info, err = p.Parse(context.Background(), raw)
 			if err == nil && targetPath != "" && !isDirPath {
-				info.Files = []parser.EpisodeFile{
+				info.Files = []parser.FileItem{
 					{
-						File:    targetPath,
-						Season:  info.Season,
-						Episode: info.Episode,
+						FilePath: targetPath,
+						Season:   info.Season,
+						Episode:  info.Episode,
 					},
 				}
 			}

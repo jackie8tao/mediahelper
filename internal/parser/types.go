@@ -9,11 +9,11 @@ const (
 	MediaTypeAnime MediaType = "anime"
 )
 
-// EpisodeFile holds parsed season and episode numbers for a single video file within a multi-file directory.
-type EpisodeFile struct {
-	File    string `json:"file"`    // Relative file path within the source directory
-	Season  int    `json:"season"`  // Season number (1+)
-	Episode int    `json:"episode"` // Episode number (1+)
+// FileItem holds a parsed media file path with its season and episode numbers.
+type FileItem struct {
+	FilePath string `json:"file_path"` // File path (relative to the scanned directory in LLM output, absolute after resolution)
+	Season   int    `json:"season"`    // Season number (1+)
+	Episode  int    `json:"episode"`   // Episode number (1+)
 }
 
 // MediaInfo holds structured metadata extracted from a media filename, torrent title, or directory file list.
@@ -38,5 +38,5 @@ type MediaInfo struct {
 	AudioCodec string `json:"audio_codec"` // Atmos, TrueHD, DTS-HD MA, DTS, DDP5.1, AAC, FLAC
 
 	// Multi-file episode mappings (populated when parsing a directory / season pack)
-	Files []EpisodeFile `json:"files,omitempty"`
+	Files []FileItem `json:"files,omitempty"`
 }
