@@ -32,8 +32,8 @@ type Config struct {
 	MinFileSize int64              `json:"min_file_size"`
 }
 
-// Client implements organizer.Organizer for local filesystem media libraries.
-type Client struct {
+// Organizer implements organizer.Organizer for local filesystem media libraries.
+type Organizer struct {
 	cfg Config
 }
 
@@ -54,18 +54,18 @@ func LocalFactory(cfgVal json.RawMessage) (organizer.Organizer, error) {
 		cfgSt.LinkMode = organizer.LinkModeHardlink
 	}
 
-	return &Client{
+	return &Organizer{
 		cfg: cfgSt,
 	}, nil
 }
 
 // Name returns the organizer provider name.
-func (c *Client) Name() string {
+func (o *Organizer) Name() string {
 	return "LocalOrganizer"
 }
 
 // Organize transfers or links media files specified in task.Files into the target library directory.
-func (c *Client) Organize(ctx context.Context, task organizer.OrganizeTask) (*organizer.OrganizeResult, error) {
+func (o *Organizer) Organize(ctx context.Context, task organizer.OrganizeTask) (*organizer.OrganizeResult, error) {
 	result := &organizer.OrganizeResult{}
 
 	if err := ctx.Err(); err != nil {
@@ -79,41 +79,11 @@ func (c *Client) Organize(ctx context.Context, task organizer.OrganizeTask) (*or
 		return result, err
 	}
 
-	// Filter and validate eligible video files from task.Files
-	var validItems []organizer.FileItem
-	for _, item := range task.Files {
-		filePath := strings.TrimSpace(item.FilePath)
-		if filePath == "" {
-			continue
-		}
-		if c.isVideoFile(filePath) {
-			item.FilePath = filePath
-			validItems = append(validItems, item)
-		}
-	}
-
-	if len(validItems) == 0 {
-		err := fmt.Errorf("no eligible video files found in task files")
-		result.Error = err.Error()
-		return result, err
-	}
-
-	mediaType := strings.ToLower(strings.TrimSpace(task.MediaType))
-	if mediaType == "" {
-		mediaType = "movie"
-	}
-
-	baseTargetDir := c.getTargetBaseDir(mediaType)
-	if baseTargetDir == "" {
-		err := fmt.Errorf("target base directory is not configured for media type '%s'", mediaType)
-		result.Error = err.Error()
-		return result, err
-	}
-
 	title := strings.TrimSpace(task.Title)
 	if title == "" {
-		baseName := filepath.Base(validItems[0].FilePath)
-		title = strings.TrimSuffix(baseName, filepath.Ext(baseName))
+		err := fmt.Errorf("title cannot be empty")
+		result.Error = err.Error()
+		return result, err
 	}
 
 	cleanTitle := sanitizeFilename(title)
@@ -126,97 +96,99 @@ func (c *Client) Organize(ctx context.Context, task organizer.OrganizeTask) (*or
 		titleYear = fmt.Sprintf("%s (%d)", cleanTitle, task.Year)
 	}
 
-	linkMode := c.cfg.LinkMode
+	mediaType := strings.ToLower(strings.TrimSpace(task.MediaType))
+	if mediaType == "" {
+		mediaType = "movie"
+	}
+
+	baseTargetDir := o.getTargetBaseDir(mediaType)
+	if baseTargetDir == "" {
+		err := fmt.Errorf("target base directory is not configured for media type '%s'", mediaType)
+		result.Error = err.Error()
+		return result, err
+	}
+
+	linkMode := o.cfg.LinkMode
 	if linkMode == "" {
 		linkMode = organizer.LinkModeHardlink
 	}
 
-	if mediaType == "movie" {
-		movieDir := filepath.Join(baseTargetDir, titleYear)
-		result.TargetDir = movieDir
+	targetDir := filepath.Join(baseTargetDir, titleYear)
+	result.TargetDir = targetDir
 
-		mainVideo := c.findMainVideoFile(validItems)
-		ext := filepath.Ext(mainVideo)
-
-		targetFileName := titleYear
-		if resTag := sanitizeFilename(task.Resolution); resTag != "" {
-			targetFileName = fmt.Sprintf("%s - %s", titleYear, resTag)
+	for _, item := range task.Files {
+		srcPath := strings.TrimSpace(item.FilePath)
+		if srcPath == "" || !o.isVideoFile(srcPath) {
+			continue
 		}
-		targetFilePath := filepath.Join(movieDir, targetFileName+ext)
 
-		if err := transferFile(mainVideo, targetFilePath, linkMode); err != nil {
-			result.Error = fmt.Sprintf("transfer movie file failed: %v", err)
-			return result, err
-		}
-		result.LinkedFiles = append(result.LinkedFiles, organizer.FilePair{
-			Source: mainVideo,
-			Target: targetFilePath,
-		})
+		ext := filepath.Ext(srcPath)
+		var targetFilePath string
 
-		c.transferSubtitles(mainVideo, targetFilePath, linkMode, result)
-	} else {
-		showDir := filepath.Join(baseTargetDir, titleYear)
-		result.TargetDir = showDir
-
-		for _, item := range validItems {
+		if mediaType == "movie" {
+			targetFileName := titleYear
+			if resTag := sanitizeFilename(task.Resolution); resTag != "" {
+				targetFileName = fmt.Sprintf("%s - %s", titleYear, resTag)
+			}
+			targetFilePath = filepath.Join(targetDir, targetFileName+ext)
+		} else {
 			season := item.Season
 			if season <= 0 {
 				season = 1
 			}
 			episode := item.Episode
 			if episode <= 0 {
-				if len(validItems) == 1 {
-					episode = 1
-				} else {
-					slog.Warn("Skipping episode file with missing episode number", "file", item.FilePath)
-					continue
-				}
+				episode = 1
 			}
 
-			seasonDir := filepath.Join(showDir, fmt.Sprintf("Season %02d", season))
-			ext := filepath.Ext(item.FilePath)
-
+			seasonDir := filepath.Join(targetDir, fmt.Sprintf("Season %02d", season))
 			var episodeFileName string
 			if epTitle := sanitizeFilename(item.EpisodeTitle); epTitle != "" {
 				episodeFileName = fmt.Sprintf("%s - S%02dE%02d - %s%s", cleanTitle, season, episode, epTitle, ext)
 			} else {
 				episodeFileName = fmt.Sprintf("%s - S%02dE%02d%s", cleanTitle, season, episode, ext)
 			}
-
-			targetFilePath := filepath.Join(seasonDir, episodeFileName)
-
-			if err := transferFile(item.FilePath, targetFilePath, linkMode); err != nil {
-				slog.Error("Transfer episode file failed", "src", item.FilePath, "dst", targetFilePath, "error", err)
-				continue
-			}
-			result.LinkedFiles = append(result.LinkedFiles, organizer.FilePair{
-				Source: item.FilePath,
-				Target: targetFilePath,
-			})
-
-			c.transferSubtitles(item.FilePath, targetFilePath, linkMode, result)
+			targetFilePath = filepath.Join(seasonDir, episodeFileName)
 		}
+
+		if err := transferFile(srcPath, targetFilePath, linkMode); err != nil {
+			slog.Error("Transfer media file failed", "src", srcPath, "dst", targetFilePath, "error", err)
+			continue
+		}
+
+		result.LinkedFiles = append(result.LinkedFiles, organizer.FilePair{
+			Source: srcPath,
+			Target: targetFilePath,
+		})
+
+		o.transferSubtitles(srcPath, targetFilePath, linkMode, result)
 	}
 
-	result.Success = len(result.LinkedFiles) > 0
+	if len(result.LinkedFiles) == 0 {
+		err := fmt.Errorf("no eligible files were organized for task '%s'", title)
+		result.Error = err.Error()
+		return result, err
+	}
+
+	result.Success = true
 	return result, nil
 }
 
-func (c *Client) getTargetBaseDir(mediaType string) string {
+func (o *Organizer) getTargetBaseDir(mediaType string) string {
 	switch mediaType {
 	case "movie":
-		return c.cfg.MovieDir
+		return o.cfg.MovieDir
 	case "anime":
-		if c.cfg.AnimeDir != "" {
-			return c.cfg.AnimeDir
+		if o.cfg.AnimeDir != "" {
+			return o.cfg.AnimeDir
 		}
-		return c.cfg.TVDir
+		return o.cfg.TVDir
 	default:
-		return c.cfg.TVDir
+		return o.cfg.TVDir
 	}
 }
 
-func (c *Client) isVideoFile(path string) bool {
+func (o *Organizer) isVideoFile(path string) bool {
 	ext := strings.ToLower(filepath.Ext(path))
 	if !videoExts[ext] {
 		return false
@@ -227,30 +199,13 @@ func (c *Client) isVideoFile(path string) bool {
 		return false
 	}
 
-	if c.cfg.MinFileSize > 0 {
-		return fi.Size() >= c.cfg.MinFileSize
+	if o.cfg.MinFileSize > 0 {
+		return fi.Size() >= o.cfg.MinFileSize
 	}
 	return true
 }
 
-func (c *Client) findMainVideoFile(items []organizer.FileItem) string {
-	if len(items) == 0 {
-		return ""
-	}
-	var largestFile string
-	var maxSize int64 = -1
-
-	for _, item := range items {
-		fi, err := os.Stat(item.FilePath)
-		if err == nil && fi.Size() > maxSize {
-			maxSize = fi.Size()
-			largestFile = item.FilePath
-		}
-	}
-	return largestFile
-}
-
-func (c *Client) transferSubtitles(srcVideo, dstVideo string, mode organizer.LinkMode, result *organizer.OrganizeResult) {
+func (o *Organizer) transferSubtitles(srcVideo, dstVideo string, mode organizer.LinkMode, result *organizer.OrganizeResult) {
 	srcDir := filepath.Dir(srcVideo)
 	srcBase := strings.TrimSuffix(filepath.Base(srcVideo), filepath.Ext(srcVideo))
 	dstBaseWithoutExt := strings.TrimSuffix(dstVideo, filepath.Ext(dstVideo))
