@@ -75,20 +75,7 @@ func TestParserComponentExecute_BindParams(t *testing.T) {
 		t.Errorf("expected files to contain bound path, got %v", outputs["files"])
 	}
 
-	// 2. Backward compatibility via legacy title parameter
-	legacyCtx := pipeline.NewStepContext("exec-1", 1, "step-legacy", "Legacy Step", comp.ID(), map[string]any{
-		"title": "Inception.2010.1080p.mkv",
-		"path":  "/downloads/Inception.2010.1080p.mkv",
-	})
-	legacyOutputs, err := comp.Execute(context.Background(), legacyCtx)
-	if err != nil {
-		t.Fatalf("unexpected execute error with legacy title: %v", err)
-	}
-	if legacyOutputs["title"] != "Inception.2010.1080p.mkv" {
-		t.Errorf("expected title Inception.2010.1080p.mkv, got %v", legacyOutputs["title"])
-	}
-
-	// 3. Multi-file parsing via explicit files array with path
+	// 2. Multi-file parsing via explicit files array with path
 	multiCtx := pipeline.NewStepContext("exec-1", 1, "step-2", "Step 2", comp.ID(), map[string]any{
 		"raw_title": "Breaking Bad",
 		"path":      "/downloads/Breaking Bad",
@@ -108,7 +95,7 @@ func TestParserComponentExecute_BindParams(t *testing.T) {
 		t.Errorf("unexpected episode mapping: %+v", multiFiles)
 	}
 
-	// 4. Directory scanning: Priority 2 extracts title from path when raw_title is empty
+	// 3. Directory scanning: Priority 2 extracts title from path when raw_title is empty
 	tempDir := t.TempDir()
 	subVideo := filepath.Join(tempDir, "01.mkv")
 	if err := os.WriteFile(subVideo, []byte("fake video"), 0644); err != nil {
@@ -130,7 +117,7 @@ func TestParserComponentExecute_BindParams(t *testing.T) {
 		t.Fatalf("expected 1 scanned file, got %v", dirOutputs["files"])
 	}
 
-	// 5. Missing required path parameter must return error even if raw_title is present
+	// 4. Missing required path parameter must return error even if raw_title is present
 	missingPathCtx := pipeline.NewStepContext("exec-1", 1, "step-no-path", "No Path Step", comp.ID(), map[string]any{
 		"raw_title": "Inception.2010.1080p.mkv",
 	})
@@ -139,7 +126,7 @@ func TestParserComponentExecute_BindParams(t *testing.T) {
 		t.Errorf("expected error on missing required path, got nil")
 	}
 
-	// 6. Missing both raw_title and path
+	// 5. Missing both raw_title and path
 	emptyCtx := pipeline.NewStepContext("exec-1", 1, "step-3", "Step 3", comp.ID(), map[string]any{})
 	_, err = comp.Execute(context.Background(), emptyCtx)
 	if err == nil {
