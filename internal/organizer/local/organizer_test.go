@@ -151,5 +151,38 @@ func TestOrganizeErrors(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected error on title with only illegal characters, got nil")
 	}
+
+	tempDir := t.TempDir()
+	testVideo := filepath.Join(tempDir, "ep.mkv")
+	if err := os.WriteFile(testVideo, []byte("content"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	orgWithDir := &Organizer{
+		cfg: Config{TVDir: tempDir},
+	}
+
+	// Test TV with invalid season
+	_, err = orgWithDir.Organize(context.Background(), organizer.OrganizeTask{
+		Title:     "Show",
+		MediaType: "tv",
+		Files: []organizer.FileItem{
+			{FilePath: testVideo, Season: 0, Episode: 1},
+		},
+	})
+	if err == nil {
+		t.Errorf("expected error on season <= 0, got nil")
+	}
+
+	// Test TV with invalid episode
+	_, err = orgWithDir.Organize(context.Background(), organizer.OrganizeTask{
+		Title:     "Show",
+		MediaType: "tv",
+		Files: []organizer.FileItem{
+			{FilePath: testVideo, Season: 1, Episode: 0},
+		},
+	})
+	if err == nil {
+		t.Errorf("expected error on episode <= 0, got nil")
+	}
 }
 

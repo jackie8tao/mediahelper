@@ -134,21 +134,23 @@ func (o *Organizer) Organize(ctx context.Context, task organizer.OrganizeTask) (
 			}
 			targetFilePath = filepath.Join(targetDir, targetFileName+ext)
 		} else {
-			season := item.Season
-			if season <= 0 {
-				season = 1
+			if item.Season <= 0 {
+				err := fmt.Errorf("invalid season %d for file %q in media type %q", item.Season, srcPath, mediaType)
+				result.Error = err.Error()
+				return result, err
 			}
-			episode := item.Episode
-			if episode <= 0 {
-				episode = 1
+			if item.Episode <= 0 {
+				err := fmt.Errorf("invalid episode %d for file %q in media type %q", item.Episode, srcPath, mediaType)
+				result.Error = err.Error()
+				return result, err
 			}
 
-			seasonDir := filepath.Join(targetDir, fmt.Sprintf("Season %02d", season))
+			seasonDir := filepath.Join(targetDir, fmt.Sprintf("Season %02d", item.Season))
 			var episodeFileName string
 			if epTitle := sanitizeFilename(item.EpisodeTitle); epTitle != "" {
-				episodeFileName = fmt.Sprintf("%s - S%02dE%02d - %s%s", cleanTitle, season, episode, epTitle, ext)
+				episodeFileName = fmt.Sprintf("%s - S%02dE%02d - %s%s", cleanTitle, item.Season, item.Episode, epTitle, ext)
 			} else {
-				episodeFileName = fmt.Sprintf("%s - S%02dE%02d%s", cleanTitle, season, episode, ext)
+				episodeFileName = fmt.Sprintf("%s - S%02dE%02d%s", cleanTitle, item.Season, item.Episode, ext)
 			}
 			targetFilePath = filepath.Join(seasonDir, episodeFileName)
 		}
