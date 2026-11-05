@@ -55,7 +55,11 @@ var parseCmd = &cobra.Command{
 			}
 			if fi, err := os.Stat(targetPath); err == nil && fi.IsDir() {
 				isDirPath = true
-				relFiles, _ = scanRelativeVideoFiles(targetPath)
+				scanned, scanErr := scanRelativeVideoFiles(targetPath)
+				if scanErr != nil {
+					return fmt.Errorf("scan video files in directory '%s' error: %w", targetPath, scanErr)
+				}
+				relFiles = scanned
 			}
 		}
 
@@ -136,7 +140,10 @@ var videoExtensions = map[string]bool{
 func scanRelativeVideoFiles(rootDir string) ([]string, error) {
 	var relFiles []string
 	err := filepath.Walk(rootDir, func(p string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
 			return nil
 		}
 		ext := strings.ToLower(filepath.Ext(info.Name()))
@@ -145,10 +152,13 @@ func scanRelativeVideoFiles(rootDir string) ([]string, error) {
 		}
 		rel, relErr := filepath.Rel(rootDir, p)
 		if relErr != nil {
-			rel = info.Name()
+			return relErr
 		}
 		relFiles = append(relFiles, filepath.ToSlash(rel))
 		return nil
 	})
-	return relFiles, err
+	if err != nil {
+		return nil, err
+	}
+	return relFiles, nil
 }

@@ -55,7 +55,11 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 		if fi, err := os.Stat(path); err == nil && fi.IsDir() {
 			isDirPath = true
 			if len(files) == 0 {
-				files, _ = scanRelativeVideoFiles(path)
+				scanned, scanErr := scanRelativeVideoFiles(path)
+				if scanErr != nil {
+					return nil, fmt.Errorf("scan directory files failed for '%s': %w", path, scanErr)
+				}
+				files = scanned
 			}
 		}
 	}
@@ -119,7 +123,10 @@ func (c *ParserComponent) Execute(ctx context.Context, sCtx *pipeline.StepContex
 func scanRelativeVideoFiles(rootDir string) ([]string, error) {
 	var relFiles []string
 	err := filepath.Walk(rootDir, func(p string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
 			return nil
 		}
 		ext := strings.ToLower(filepath.Ext(info.Name()))
@@ -128,12 +135,15 @@ func scanRelativeVideoFiles(rootDir string) ([]string, error) {
 		}
 		rel, relErr := filepath.Rel(rootDir, p)
 		if relErr != nil {
-			rel = info.Name()
+			return relErr
 		}
 		relFiles = append(relFiles, filepath.ToSlash(rel))
 		return nil
 	})
-	return relFiles, err
+	if err != nil {
+		return nil, err
+	}
+	return relFiles, nil
 }
 
 // RegisterComponents instantiates parser components according to system configuration

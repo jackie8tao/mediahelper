@@ -2,6 +2,8 @@ package parser
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/jackie8tao/mediahelper/internal/config"
@@ -105,7 +107,26 @@ func TestParserComponentExecute_BindParams(t *testing.T) {
 		t.Errorf("unexpected episode mapping: %+v", multiFiles)
 	}
 
-	// 4. Missing both raw_title and path
+	// 4. Directory scanning when path is a directory and files is empty
+	tempDir := t.TempDir()
+	subVideo := filepath.Join(tempDir, "01.mkv")
+	if err := os.WriteFile(subVideo, []byte("fake video"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	dirCtx := pipeline.NewStepContext("exec-1", 1, "step-dir", "Dir Step", comp.ID(), map[string]any{
+		"path": tempDir,
+	})
+	dirOutputs, err := comp.Execute(context.Background(), dirCtx)
+	if err != nil {
+		t.Fatalf("unexpected execute error with dir path: %v", err)
+	}
+	dirFiles, ok := dirOutputs["files"].([]FileItem)
+	if !ok || len(dirFiles) != 1 {
+		t.Fatalf("expected 1 scanned file, got %v", dirOutputs["files"])
+	}
+
+	// 5. Missing both raw_title and path
 	emptyCtx := pipeline.NewStepContext("exec-1", 1, "step-3", "Step 3", comp.ID(), map[string]any{})
 	_, err = comp.Execute(context.Background(), emptyCtx)
 	if err == nil {
