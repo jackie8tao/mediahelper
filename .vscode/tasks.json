@@ -56,7 +56,7 @@
         "-t",
         "deepseek",
         "-k",
-        "sk-f4d9ac71c50e4af58c1873d173f49897",
+        "${input:deepseekApiKey}",
         "-i",
         "${input:rawTitle}"
       ],
@@ -204,6 +204,11 @@
       "type": "promptString",
       "description": "Enter raw media filename or torrent title to parse",
       "default": "Inception.2010.2160p.UHD.BluRay.x265-GROUP"
+    },
+    {
+      "id": "deepseekApiKey",
+      "type": "promptString",
+      "description": "Enter DeepSeek API Key"
     },
     {
       "id": "orgTargetDir",
