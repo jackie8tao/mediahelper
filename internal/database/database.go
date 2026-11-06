@@ -60,9 +60,6 @@ func InitDB(dsn string) (*gorm.DB, error) {
 
 	// Auto-migrate schema entities
 	if err := db.AutoMigrate(
-		&TorrentRecord{},
-		&TaskHistory{},
-		&MediaMapping{},
 		&Pipeline{},
 		&PipelineExecution{},
 		&StepExecution{},
