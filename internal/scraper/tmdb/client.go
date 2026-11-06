@@ -17,7 +17,6 @@ import (
 )
 
 var (
-	titleYearRegex = regexp.MustCompile(`^(.*?)\s*[\(\[]?((?:19|20)\d{2})[\)\]]?$`)
 	seasonDirRegex = regexp.MustCompile(`(?i)^Season\s*(\d+)$`)
 	episodeRegex   = regexp.MustCompile(`(?i)S(\d+)E(\d+)`)
 )
@@ -106,25 +105,15 @@ func (c *Client) Scrape(ctx context.Context, task scraper.ScrapeTask) (*scraper.
 		return result, err
 	}
 
-	// Infer title and year from target directory name if not provided
-	title := strings.TrimSpace(task.Title)
-	year := task.Year
-	if title == "" {
-		baseName := filepath.Base(targetDir)
-		if m := titleYearRegex.FindStringSubmatch(baseName); len(m) == 3 {
-			title = strings.TrimSpace(m[1])
-			if year <= 0 {
-				year, _ = strconv.Atoi(m[2])
-			}
-		} else {
-			title = baseName
-		}
+	if task.TMDBID <= 0 {
+		err := fmt.Errorf("tmdb_id is required")
+		result.Error = err.Error()
+		return result, err
 	}
 
-	// Detect media type if omitted
 	mediaType := strings.ToLower(strings.TrimSpace(task.MediaType))
 	if mediaType == "" {
-		mediaType = detectMediaType(targetDir)
+		mediaType = "movie"
 	}
 
 	lang := strings.TrimSpace(task.Language)
@@ -135,16 +124,19 @@ func (c *Client) Scrape(ctx context.Context, task scraper.ScrapeTask) (*scraper.
 	saveNFO := task.SaveNFO == nil || *task.SaveNFO
 	saveImages := task.SaveImages == nil || *task.SaveImages
 
-	var metadata *scraper.MediaMetadata
+	var (
+		metadata *scraper.MediaMetadata
+		scrapeErr error
+	)
 	if mediaType == "tv" || mediaType == "anime" {
-		metadata, err = c.scrapeTV(ctx, title, year, task.TMDBID, lang, targetDir)
+		metadata, scrapeErr = c.scrapeTV(ctx, task.TMDBID, lang, targetDir)
 	} else {
-		metadata, err = c.scrapeMovie(ctx, title, year, task.TMDBID, lang)
+		metadata, scrapeErr = c.scrapeMovie(ctx, task.TMDBID, lang)
 	}
 
-	if err != nil {
-		result.Error = err.Error()
-		return result, err
+	if scrapeErr != nil {
+		result.Error = scrapeErr.Error()
+		return result, scrapeErr
 	}
 
 	result.Metadata = metadata
@@ -194,24 +186,7 @@ func (c *Client) Scrape(ctx context.Context, task scraper.ScrapeTask) (*scraper.
 	return result, nil
 }
 
-func (c *Client) scrapeMovie(ctx context.Context, title string, year int, tmdbID int, lang string) (*scraper.MediaMetadata, error) {
-	if tmdbID <= 0 {
-		res, err := c.apiClient.SearchMovie(ctx, title, year, lang)
-		if err != nil {
-			return nil, err
-		}
-		if len(res.Results) == 0 {
-			// Fallback: search without year if year was set
-			if year > 0 {
-				res, _ = c.apiClient.SearchMovie(ctx, title, 0, lang)
-			}
-		}
-		if len(res.Results) == 0 {
-			return nil, fmt.Errorf("no movie found on TMDB for query '%s' (%d)", title, year)
-		}
-		tmdbID = res.Results[0].ID
-	}
-
+func (c *Client) scrapeMovie(ctx context.Context, tmdbID int, lang string) (*scraper.MediaMetadata, error) {
 	details, err := c.apiClient.GetMovieDetails(ctx, tmdbID, lang)
 	if err != nil {
 		return nil, fmt.Errorf("fetch movie details (id=%d) error: %w", tmdbID, err)
@@ -261,21 +236,7 @@ func (c *Client) scrapeMovie(ctx context.Context, title string, year int, tmdbID
 	return meta, nil
 }
 
-func (c *Client) scrapeTV(ctx context.Context, title string, year int, tmdbID int, lang, targetDir string) (*scraper.MediaMetadata, error) {
-	if tmdbID <= 0 {
-		res, err := c.apiClient.SearchTV(ctx, title, year, lang)
-		if err != nil {
-			return nil, err
-		}
-		if len(res.Results) == 0 && year > 0 {
-			res, _ = c.apiClient.SearchTV(ctx, title, 0, lang)
-		}
-		if len(res.Results) == 0 {
-			return nil, fmt.Errorf("no TV show found on TMDB for query '%s' (%d)", title, year)
-		}
-		tmdbID = res.Results[0].ID
-	}
-
+func (c *Client) scrapeTV(ctx context.Context, tmdbID int, lang, targetDir string) (*scraper.MediaMetadata, error) {
 	details, err := c.apiClient.GetTVDetails(ctx, tmdbID, lang)
 	if err != nil {
 		return nil, fmt.Errorf("fetch TV details (id=%d) error: %w", tmdbID, err)
@@ -380,23 +341,6 @@ func (c *Client) writeEpisodeNFOs(targetDir string, meta *scraper.MediaMetadata,
 		}
 		return nil
 	})
-}
-
-func detectMediaType(dirPath string) string {
-	entries, err := os.ReadDir(dirPath)
-	if err != nil {
-		return "movie"
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() && seasonDirRegex.MatchString(entry.Name()) {
-			return "tv"
-		}
-		if !entry.IsDir() && episodeRegex.MatchString(entry.Name()) {
-			return "tv"
-		}
-	}
-	return "movie"
 }
 
 func detectSeasonsInDir(dirPath string) []int {

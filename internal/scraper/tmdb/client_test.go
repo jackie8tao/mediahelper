@@ -94,6 +94,7 @@ func TestTMDBScrapeMovie(t *testing.T) {
 
 	task := scraper.ScrapeTask{
 		TargetDir: movieDir,
+		TMDBID:    550,
 		MediaType: "movie",
 	}
 
@@ -225,6 +226,7 @@ func TestTMDBScrapeTV(t *testing.T) {
 
 	task := scraper.ScrapeTask{
 		TargetDir:  tvDir,
+		TMDBID:     1396,
 		MediaType:  "tv",
 		SaveImages: &noImages,
 	}
@@ -260,12 +262,13 @@ func TestTMDBScrapeTV(t *testing.T) {
 }
 
 func TestTMDBScrapeValidationErrors(t *testing.T) {
+	tempDir := t.TempDir()
 	client := &Client{
 		cfg: Config{APIKey: "fake_key"},
 	}
 
 	// 1. Missing target_dir
-	_, err := client.Scrape(context.Background(), scraper.ScrapeTask{})
+	_, err := client.Scrape(context.Background(), scraper.ScrapeTask{TMDBID: 100})
 	if err == nil {
 		t.Errorf("expected error on empty target_dir, got nil")
 	}
@@ -273,9 +276,18 @@ func TestTMDBScrapeValidationErrors(t *testing.T) {
 	// 2. Non-existent target_dir
 	_, err = client.Scrape(context.Background(), scraper.ScrapeTask{
 		TargetDir: "/path/that/does/not/exist/at/all",
+		TMDBID:    100,
 	})
 	if err == nil {
 		t.Errorf("expected error on non-existent directory, got nil")
+	}
+
+	// 3. Missing tmdb_id
+	_, err = client.Scrape(context.Background(), scraper.ScrapeTask{
+		TargetDir: tempDir,
+	})
+	if err == nil {
+		t.Errorf("expected error on missing tmdb_id, got nil")
 	}
 }
 

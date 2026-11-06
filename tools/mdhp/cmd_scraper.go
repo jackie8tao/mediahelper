@@ -36,13 +36,15 @@ var scraperCmd = &cobra.Command{
 var scrapeCmd = &cobra.Command{
 	Use:   "scrape [flags]",
 	Short: "Scrape and enrich a local media directory with NFO files and artwork",
-	Example: `  mdhp scraper scrape -k <api_key> -d "/library/movies/Inception (2010)"
-  mdhp scraper scrape -k <api_key> -d "/library/tv/Breaking Bad (2008)" -m tv
-  mdhp scraper scrape -k <api_key> -d "/library/movies/1917" --title "1917" -y 2019 --tmdb-id 530915`,
+	Example: `  mdhp scraper scrape -k <api_key> -d "/library/movies/Inception (2010)" --tmdb-id 27205
+  mdhp scraper scrape -k <api_key> -d "/library/tv/Breaking Bad (2008)" -m tv --tmdb-id 1396`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		targetDir := strings.TrimSpace(scrapeDir)
 		if targetDir == "" {
 			return fmt.Errorf("--dir is required")
+		}
+		if scrapeTMDBID <= 0 {
+			return fmt.Errorf("--tmdb-id is required")
 		}
 
 		detailBytes, err := json.Marshal(tmdb.Config{
@@ -102,7 +104,7 @@ func init() {
 	scrapeCmd.Flags().StringVar(&scrapeTitle, "title", "", "Explicit media title (optional, inferred from directory name if empty)")
 	scrapeCmd.Flags().IntVarP(&scrapeYear, "year", "y", 0, "Explicit release year (optional)")
 	scrapeCmd.Flags().StringVarP(&scrapeMediaType, "media-type", "m", "", "Media type: movie / tv / anime (optional)")
-	scrapeCmd.Flags().IntVar(&scrapeTMDBID, "tmdb-id", 0, "Direct TMDB ID if already known (optional)")
+	scrapeCmd.Flags().IntVarP(&scrapeTMDBID, "tmdb-id", "i", 0, "TMDB unique ID (required)")
 	scrapeCmd.Flags().BoolVar(&scrapeNoNFO, "no-nfo", false, "Disable writing .nfo XML files")
 	scrapeCmd.Flags().BoolVar(&scrapeNoImages, "no-images", false, "Disable downloading poster and backdrop images")
 

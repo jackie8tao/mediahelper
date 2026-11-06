@@ -43,10 +43,10 @@ type MediaMetadata struct {
 // ScrapeTask represents incoming parameters to scrape media metadata and write assets into target_dir.
 type ScrapeTask struct {
 	TargetDir  string `json:"target_dir"`            // Local directory containing the organized media files (required)
-	MediaType  string `json:"media_type,omitempty"`  // Media type: movie / tv / anime (optional)
-	Title      string `json:"title,omitempty"`       // Search or display title (optional, inferred from TargetDir if empty)
+	TMDBID     int    `json:"tmdb_id"`               // TMDB unique identifier passed from upstream parser/matcher (required)
+	MediaType  string `json:"media_type,omitempty"`  // Media type: movie / tv / anime (optional, default: movie)
+	Title      string `json:"title,omitempty"`       // Search or display title (optional)
 	Year       int    `json:"year,omitempty"`        // Release year (optional)
-	TMDBID     int    `json:"tmdb_id,omitempty"`     // Direct TMDB ID if already known (optional)
 	Language   string `json:"language,omitempty"`    // Language code, e.g. "zh-CN" (default: "zh-CN")
 	SaveNFO    *bool  `json:"save_nfo,omitempty"`    // Whether to generate .nfo file (default: true)
 	SaveImages *bool  `json:"save_images,omitempty"` // Whether to download poster and backdrop (default: true)
