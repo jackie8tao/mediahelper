@@ -22,6 +22,7 @@ const (
 	Size100MB = 100 * 1024 * 1024
 	Size1GB   = 1024 * 1024 * 1024
 	Size2GB   = 2 * 1024 * 1024 * 1024
+	Size4GB   = 4 * 1024 * 1024 * 1024
 	Size8GB   = 8 * 1024 * 1024 * 1024
 	Size15GB  = 15 * 1024 * 1024 * 1024
 	Size25GB  = 25 * 1024 * 1024 * 1024
@@ -142,5 +143,3 @@ var DefaultPresets = []PresetItem{
 		},
 	},
 }
-
-const Size4GB = 4 * 1024 * 1024 * 1024
