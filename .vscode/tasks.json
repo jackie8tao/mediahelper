@@ -167,9 +167,37 @@
         "panel": "shared",
         "clear": true
       }
+    },
+    {
+      "label": "package: build linux packages",
+      "type": "shell",
+      "command": "./scripts/build_linux_pkg.sh",
+      "args": [
+        "${input:packageArch}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
     }
   ],
   "inputs": [
+    {
+      "id": "packageArch",
+      "type": "pickString",
+      "description": "Select target Linux architecture to package",
+      "options": [
+        "amd64",
+        "arm64",
+        "all"
+      ],
+      "default": "amd64"
+    },
     {
       "id": "genOutputDir",
       "type": "promptString",

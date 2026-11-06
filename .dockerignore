@@ -1,0 +1,36 @@
+# Version control
+.git
+.gitignore
+
+# Build outputs and binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+test/
+
+# Local databases and SQLite files
+*.db
+*.db-wal
+*.db-shm
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Test datasets and temporary data
+testdata/
+mock_media/
+
+# IDE and tool configs
+.idea/
+.vscode/
+.agents/
+.gemini/
+
+# Logs and coverage
+*.log
+coverage.out
+coverage.html
+

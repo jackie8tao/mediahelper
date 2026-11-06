@@ -1,0 +1,26 @@
+[Unit]
+Description=MediaHelper Automated Media Management Service
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/var/lib/mediahelper
+ExecStart=/usr/local/bin/mediahelper -config /etc/mediahelper/config.json
+Restart=always
+RestartSec=5s
+
+# Standard output and error logging to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mediahelper
+
+# Security & sandbox hardening
+LimitNOFILE=65535
+TimeoutStopSec=15s
+
+[Install]
+WantedBy=multi-user.target
+
