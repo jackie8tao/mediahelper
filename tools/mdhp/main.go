@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	_ "github.com/jackie8tao/mediahelper/internal/parser/matcher/tmdb"
 	"github.com/spf13/cobra"
 )
 

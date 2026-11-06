@@ -121,8 +121,8 @@ func (c *Client) Name() string {
 	return "DeepSeek"
 }
 
-// Parse calls DeepSeek Chat Completions in JSON mode to parse a media filename or torrent title.
-func (c *Client) Parse(ctx context.Context, raw string) (*parser.MediaInfo, error) {
+// Recognize calls DeepSeek Chat Completions in JSON mode to extract structured candidate MediaInfo.
+func (c *Client) Recognize(ctx context.Context, raw string) (*parser.MediaInfo, error) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
 		return nil, fmt.Errorf("raw input title cannot be empty")
@@ -177,11 +177,10 @@ func (c *Client) Parse(ctx context.Context, raw string) (*parser.MediaInfo, erro
 	return &info, nil
 }
 
-// ParseFiles calls DeepSeek Chat Completions in JSON mode to parse overall media metadata
-// and extract season/episode numbers for each video file in a directory or season pack.
-func (c *Client) ParseFiles(ctx context.Context, rawTitle string, files []string) (*parser.MediaInfo, error) {
+// RecognizeFiles calls DeepSeek Chat Completions to parse candidate metadata and per-file season/episode mappings.
+func (c *Client) RecognizeFiles(ctx context.Context, rawTitle string, files []string) (*parser.MediaInfo, error) {
 	if len(files) == 0 {
-		return c.Parse(ctx, rawTitle)
+		return c.Recognize(ctx, rawTitle)
 	}
 
 	payload := map[string]any{
@@ -240,6 +239,16 @@ func (c *Client) ParseFiles(ctx context.Context, rawTitle string, files []string
 	}
 
 	return &info, nil
+}
+
+// Parse implements parser.Parser by delegating to Recognize.
+func (c *Client) Parse(ctx context.Context, raw string) (*parser.MediaInfo, error) {
+	return c.Recognize(ctx, raw)
+}
+
+// ParseFiles implements parser.Parser by delegating to RecognizeFiles.
+func (c *Client) ParseFiles(ctx context.Context, rawTitle string, files []string) (*parser.MediaInfo, error) {
+	return c.RecognizeFiles(ctx, rawTitle, files)
 }
 
 // cleanJSONBlock strips optional markdown code fences around JSON output.

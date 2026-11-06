@@ -67,6 +67,7 @@ func SeedDefaultPipelines(ctx context.Context, repo *Repository) error {
 					"title":      "{{ steps.organizer.title }}",
 					"year":       "{{ steps.organizer.year }}",
 					"media_type": "{{ steps.organizer.media_type }}",
+					"tmdb_id":    "{{ steps.parser.tmdb_id }}",
 				},
 				ContinueOnError: true,
 			},

@@ -23,6 +23,19 @@ type ParseTask struct {
 	Files    []string `json:"files"`     // Explicit list of relative video file paths (optional)
 }
 
+// MatchResult represents the authoritative verification outcome from a third-party platform.
+type MatchResult struct {
+	Matched       bool      `json:"matched"`        // Whether a reliable authoritative match was found
+	Provider      string    `json:"provider"`       // Match provider name, e.g. "tmdb"
+	TMDBID        int       `json:"tmdb_id"`        // Official TMDB ID
+	IMDbID        string    `json:"imdb_id"`        // Official IMDb ID
+	Title         string    `json:"title"`          // Standard official localized title
+	OriginalTitle string    `json:"original_title"` // Original language title
+	Year          int       `json:"year"`           // Official release year
+	MediaType     MediaType `json:"media_type"`     // Official media type (movie / tv)
+	Confidence    float64   `json:"confidence"`     // Matching confidence score (0.0 - 1.0)
+}
+
 // MediaInfo holds structured metadata extracted from a media filename, torrent title, or directory file list.
 type MediaInfo struct {
 	OriginalText string    `json:"original_text"` // Raw input filename or torrent title
@@ -33,6 +46,13 @@ type MediaInfo struct {
 	CnTitle string `json:"cn_title"` // Cleaned Chinese title (if present)
 	EnTitle string `json:"en_title"` // Cleaned English title (if present)
 	Year    int    `json:"year"`     // Release year (e.g. 2023, or 0 if unrecognized)
+
+	// Verification metadata (calibrated by third-party database like TMDB)
+	TMDBID     int     `json:"tmdb_id,omitempty"`    // Matched TMDB ID
+	IMDbID     string  `json:"imdb_id,omitempty"`    // Matched IMDb ID
+	Verified   bool    `json:"verified"`             // Whether verified against an authoritative database
+	MatchedBy  string  `json:"matched_by,omitempty"` // Provider name that verified this media (e.g. "tmdb")
+	Confidence float64 `json:"confidence,omitempty"` // Matching confidence score (0.0 - 1.0)
 
 	// Technical specification metadata
 	Resolution string `json:"resolution"`  // 4K, 1080p, 720p, 480p

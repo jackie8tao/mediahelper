@@ -10,15 +10,18 @@ import (
 
 	"github.com/jackie8tao/mediahelper/internal/config"
 	"github.com/jackie8tao/mediahelper/internal/parser"
-	"github.com/jackie8tao/mediahelper/internal/parser/deepseek"
+	_ "github.com/jackie8tao/mediahelper/internal/parser/deepseek"
 	"github.com/spf13/cobra"
 )
 
 var (
-	parserType    string
-	parserAPIKey  string
-	parserBaseURL string
-	parserModel   string
+	parserType        string
+	parserAPIKey      string
+	parserBaseURL     string
+	parserModel       string
+	parserMatcherType string
+	parserTMDBKey     string
+	parserTMDBProxy   string
 )
 
 var parserCmd = &cobra.Command{
@@ -67,11 +70,27 @@ var parseCmd = &cobra.Command{
 			return fmt.Errorf("raw input title or path is required (provide as argument, -i/--input, or -p/--path)")
 		}
 
-		detailBytes, err := json.Marshal(deepseek.Config{
-			APIKey:  parserAPIKey,
-			BaseURL: parserBaseURL,
-			Model:   parserModel,
-		})
+		cfgMap := map[string]any{
+			"api_key":  parserAPIKey,
+			"base_url": parserBaseURL,
+			"model":    parserModel,
+		}
+
+		if parserTMDBKey != "" || parserMatcherType != "" {
+			mType := parserMatcherType
+			if mType == "" {
+				mType = "tmdb"
+			}
+			cfgMap["matcher"] = map[string]any{
+				"type": mType,
+				"detail": map[string]any{
+					"api_key": parserTMDBKey,
+					"proxy":   parserTMDBProxy,
+				},
+			}
+		}
+
+		detailBytes, err := json.Marshal(cfgMap)
 		if err != nil {
 			return fmt.Errorf("marshal parser config failed: %w", err)
 		}
@@ -124,6 +143,9 @@ func init() {
 	parserCmd.PersistentFlags().StringVarP(&parserAPIKey, "apikey", "k", "", "LLM API key")
 	parserCmd.PersistentFlags().StringVarP(&parserBaseURL, "baseurl", "u", "", "LLM API base URL (optional)")
 	parserCmd.PersistentFlags().StringVarP(&parserModel, "model", "m", "", "LLM model name (optional)")
+	parserCmd.PersistentFlags().StringVar(&parserMatcherType, "matcher", "", "Third-party matcher provider (e.g. tmdb)")
+	parserCmd.PersistentFlags().StringVar(&parserTMDBKey, "tmdb-key", "", "TMDB API key for verification/matching")
+	parserCmd.PersistentFlags().StringVar(&parserTMDBProxy, "tmdb-proxy", "", "Proxy URL for TMDB matcher")
 
 	parseCmd.Flags().StringVarP(&parseInput, "input", "i", "", "Raw filename or torrent title to parse")
 	parseCmd.Flags().StringVarP(&parsePath, "path", "p", "", "Local directory or file path to scan and parse")
