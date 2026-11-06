@@ -104,7 +104,7 @@ func buildMovieNFO(meta *scraper.MediaMetadata) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []byte(fmt.Sprintf("%s\n%s\n", xml.Header, string(out))), nil
+	return fmt.Appendf(nil, "%s\n%s\n", xml.Header, out), nil
 }
 
 func buildTVShowNFO(meta *scraper.MediaMetadata) ([]byte, error) {
@@ -153,5 +153,5 @@ func buildTVShowNFO(meta *scraper.MediaMetadata) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []byte(fmt.Sprintf("%s\n%s\n", xml.Header, string(out))), nil
+	return fmt.Appendf(nil, "%s\n%s\n", xml.Header, out), nil
 }
