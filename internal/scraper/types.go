@@ -20,30 +20,32 @@ type EpisodeMetadata struct {
 
 // MediaMetadata holds standardized multimedia metadata scraped from external providers.
 type MediaMetadata struct {
-	TMDBID        int               `json:"tmdb_id"`        // TMDB ID
-	IMDbID        string            `json:"imdb_id"`        // IMDb ID (e.g. tt15398776)
-	MediaType     string            `json:"media_type"`     // Media type: movie / tv / anime
-	Title         string            `json:"title"`          // Official localized title
-	OriginalTitle string            `json:"original_title"` // Original language title
-	SortTitle     string            `json:"sort_title"`     // Sort title
-	Year          int               `json:"year"`           // Release year
-	Premiered     string            `json:"premiered"`      // Premiere date (YYYY-MM-DD)
-	Plot          string            `json:"plot"`           // Overview / plot summary
-	Rating        float64           `json:"rating"`         // Rating score (0.0 - 10.0)
-	Votes         int               `json:"votes"`          // Rating vote count
-	Genres        []string          `json:"genres"`         // Genre tags
-	Studios       []string          `json:"studios"`        // Production companies / studios
-	Directors     []string          `json:"directors"`      // Director names
-	Actors        []Actor           `json:"actors"`         // Principal cast list
-	PosterURL     string            `json:"poster_url"`     // Full poster image URL
-	BackdropURL   string            `json:"backdrop_url"`   // Full backdrop / fanart URL
-	Episodes      []EpisodeMetadata `json:"episodes"`       // Episodes metadata (for TV / anime series)
+	TMDBID        int               `json:"tmdb_id"`             // TMDB ID
+	IMDbID        string            `json:"imdb_id"`             // IMDb ID (e.g. tt15398776)
+	DoubanID      string            `json:"douban_id,omitempty"` // Douban Subject ID (e.g. 1292052)
+	MediaType     string            `json:"media_type"`          // Media type: movie / tv / anime
+	Title         string            `json:"title"`               // Official localized title
+	OriginalTitle string            `json:"original_title"`      // Original language title
+	SortTitle     string            `json:"sort_title"`          // Sort title
+	Year          int               `json:"year"`                // Release year
+	Premiered     string            `json:"premiered"`           // Premiere date (YYYY-MM-DD)
+	Plot          string            `json:"plot"`                // Overview / plot summary
+	Rating        float64           `json:"rating"`              // Rating score (0.0 - 10.0)
+	Votes         int               `json:"votes"`               // Rating vote count
+	Genres        []string          `json:"genres"`              // Genre tags
+	Studios       []string          `json:"studios"`             // Production companies / studios
+	Directors     []string          `json:"directors"`           // Director names
+	Actors        []Actor           `json:"actors"`              // Principal cast list
+	PosterURL     string            `json:"poster_url"`          // Full poster image URL
+	BackdropURL   string            `json:"backdrop_url"`        // Full backdrop / fanart URL
+	Episodes      []EpisodeMetadata `json:"episodes"`            // Episodes metadata (for TV / anime series)
 }
 
 // ScrapeTask represents incoming parameters to scrape media metadata and write assets into target_dir.
 type ScrapeTask struct {
 	TargetDir  string `json:"target_dir"`            // Local directory containing the organized media files (required)
-	TMDBID     int    `json:"tmdb_id"`               // TMDB unique identifier passed from upstream parser/matcher (required)
+	TMDBID     int    `json:"tmdb_id,omitempty"`     // TMDB unique identifier (required for TMDB scraper)
+	DoubanID   string `json:"douban_id,omitempty"`   // Douban subject ID (required for Douban scraper)
 	MediaType  string `json:"media_type,omitempty"`  // Media type: movie / tv / anime (optional, default: movie)
 	Title      string `json:"title,omitempty"`       // Search or display title (optional)
 	Year       int    `json:"year,omitempty"`        // Release year (optional)

@@ -62,6 +62,7 @@ func (c *ScraperComponent) Execute(ctx context.Context, sCtx *pipeline.StepConte
 		outputs["original_title"] = res.Metadata.OriginalTitle
 		outputs["year"] = res.Metadata.Year
 		outputs["tmdb_id"] = res.Metadata.TMDBID
+		outputs["douban_id"] = res.Metadata.DoubanID
 		outputs["poster_url"] = res.Metadata.PosterURL
 		outputs["backdrop_url"] = res.Metadata.BackdropURL
 		outputs["metadata"] = res.Metadata
