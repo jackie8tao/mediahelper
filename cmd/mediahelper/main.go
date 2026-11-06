@@ -34,8 +34,8 @@ import (
 
 	_ "github.com/jackie8tao/mediahelper/internal/downloader/qbittorrent"
 	_ "github.com/jackie8tao/mediahelper/internal/organizer/local"
-	_ "github.com/jackie8tao/mediahelper/internal/parser/deepseek"
 	_ "github.com/jackie8tao/mediahelper/internal/parser/matcher/tmdb"
+	_ "github.com/jackie8tao/mediahelper/internal/parser/recognizer/deepseek"
 	_ "github.com/jackie8tao/mediahelper/internal/scraper/tmdb"
 )
 

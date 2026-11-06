@@ -10,7 +10,8 @@ import (
 
 	"github.com/jackie8tao/mediahelper/internal/config"
 	"github.com/jackie8tao/mediahelper/internal/parser"
-	_ "github.com/jackie8tao/mediahelper/internal/parser/deepseek"
+	_ "github.com/jackie8tao/mediahelper/internal/parser/matcher/tmdb"
+	_ "github.com/jackie8tao/mediahelper/internal/parser/recognizer/deepseek"
 	"github.com/spf13/cobra"
 )
 
