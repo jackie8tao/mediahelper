@@ -214,7 +214,6 @@ func TestTMDBScrapeTV(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	noImages := true
 	client := &Client{
 		cfg: Config{
 			APIKey:   "fake_key",
@@ -225,10 +224,10 @@ func TestTMDBScrapeTV(t *testing.T) {
 	}
 
 	task := scraper.ScrapeTask{
-		TargetDir:  tvDir,
-		TMDBID:     1396,
-		MediaType:  "tv",
-		SaveImages: &noImages,
+		TargetDir:     tvDir,
+		TMDBID:        1396,
+		MediaType:     "tv",
+		DisableImages: true,
 	}
 
 	res, err := client.Scrape(context.Background(), task)

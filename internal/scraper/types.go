@@ -50,8 +50,8 @@ type ScrapeTask struct {
 	Title      string `json:"title,omitempty"`       // Search or display title (optional)
 	Year       int    `json:"year,omitempty"`        // Release year (optional)
 	Language   string `json:"language,omitempty"`    // Language code, e.g. "zh-CN" (default: "zh-CN")
-	SaveNFO    *bool  `json:"save_nfo,omitempty"`    // Whether to generate .nfo file (default: true)
-	SaveImages *bool  `json:"save_images,omitempty"` // Whether to download poster and backdrop (default: true)
+	DisableNFO    bool   `json:"disable_nfo,omitempty"`    // Whether to disable generating .nfo files (default: false, meaning NFO is generated)
+	DisableImages bool   `json:"disable_images,omitempty"` // Whether to disable downloading poster and backdrop images (default: false)
 }
 
 // ScrapeResult represents the final outcome of a scraping operation.

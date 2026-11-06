@@ -224,3 +224,4 @@ func (c *Client) DoGet(ctx context.Context, endpoint string, target any) error {
 
 	return json.NewDecoder(resp.Body).Decode(target)
 }
+

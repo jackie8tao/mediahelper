@@ -81,19 +81,16 @@ var scrapeCmd = &cobra.Command{
 			return fmt.Errorf("create scraper failed: %w", err)
 		}
 
-		saveNFO := !scrapeNoNFO
-		saveImages := !scrapeNoImages
-
 		task := scraper.ScrapeTask{
-			TargetDir:  targetDir,
-			Title:      scrapeTitle,
-			Year:       scrapeYear,
-			MediaType:  scrapeMediaType,
-			TMDBID:     scrapeTMDBID,
-			DoubanID:   scrapeDoubanID,
-			Language:   scraperLanguage,
-			SaveNFO:    &saveNFO,
-			SaveImages: &saveImages,
+			TargetDir:     targetDir,
+			Title:         scrapeTitle,
+			Year:          scrapeYear,
+			MediaType:     scrapeMediaType,
+			TMDBID:        scrapeTMDBID,
+			DoubanID:      scrapeDoubanID,
+			Language:      scraperLanguage,
+			DisableNFO:    scrapeNoNFO,
+			DisableImages: scrapeNoImages,
 		}
 
 		res, err := sc.Scrape(context.Background(), task)

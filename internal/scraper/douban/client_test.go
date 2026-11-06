@@ -171,12 +171,11 @@ func TestDoubanScraper_ScrapeTV(t *testing.T) {
 		httpClient: server.Client(),
 	}
 
-	noImages := true
 	task := scraper.ScrapeTask{
-		TargetDir:  tvDir,
-		DoubanID:   "35465232",
-		MediaType:  "tv",
-		SaveImages: &noImages,
+		TargetDir:     tvDir,
+		DoubanID:      "35465232",
+		MediaType:     "tv",
+		DisableImages: true,
 	}
 
 	res, err := client.Scrape(context.Background(), task)

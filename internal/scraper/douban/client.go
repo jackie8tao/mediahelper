@@ -116,9 +116,6 @@ func (c *Client) Scrape(ctx context.Context, task scraper.ScrapeTask) (*scraper.
 		mediaType = "movie"
 	}
 
-	saveNFO := task.SaveNFO == nil || *task.SaveNFO
-	saveImages := task.SaveImages == nil || *task.SaveImages
-
 	var (
 		metadata  *scraper.MediaMetadata
 		scrapeErr error
@@ -137,7 +134,7 @@ func (c *Client) Scrape(ctx context.Context, task scraper.ScrapeTask) (*scraper.
 	result.Metadata = metadata
 
 	// 1. Write NFO XML
-	if saveNFO {
+	if !task.DisableNFO {
 		if mediaType == "tv" || mediaType == "anime" {
 			nfoPath := filepath.Join(targetDir, "tvshow.nfo")
 			if nfoBytes, nfoErr := buildTVShowNFO(metadata); nfoErr == nil {
@@ -156,7 +153,7 @@ func (c *Client) Scrape(ctx context.Context, task scraper.ScrapeTask) (*scraper.
 	}
 
 	// 2. Download Images
-	if saveImages {
+	if !task.DisableImages {
 		if metadata.PosterURL != "" {
 			posterPath := filepath.Join(targetDir, "poster.jpg")
 			if dlErr := c.apiClient.DownloadImage(ctx, metadata.PosterURL, posterPath); dlErr == nil {

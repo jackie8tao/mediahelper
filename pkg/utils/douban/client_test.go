@@ -130,3 +130,4 @@ func TestDoubanClient_Methods(t *testing.T) {
 		t.Errorf("unexpected downloaded image data: %s, err: %v", string(data), err)
 	}
 }
+
