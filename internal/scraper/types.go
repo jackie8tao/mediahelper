@@ -43,13 +43,13 @@ type MediaMetadata struct {
 
 // ScrapeTask represents incoming parameters to scrape media metadata and write assets into target_dir.
 type ScrapeTask struct {
-	TargetDir  string `json:"target_dir"`            // Local directory containing the organized media files (required)
-	TMDBID     int    `json:"tmdb_id,omitempty"`     // TMDB unique identifier (required for TMDB scraper)
-	DoubanID   string `json:"douban_id,omitempty"`   // Douban subject ID (required for Douban scraper)
-	MediaType  string `json:"media_type,omitempty"`  // Media type: movie / tv / anime (optional, default: movie)
-	Title      string `json:"title,omitempty"`       // Search or display title (optional)
-	Year       int    `json:"year,omitempty"`        // Release year (optional)
-	Language   string `json:"language,omitempty"`    // Language code, e.g. "zh-CN" (default: "zh-CN")
+	TargetDir     string `json:"target_dir"`               // Local directory containing the organized media files (required)
+	TMDBID        int    `json:"tmdb_id,omitempty"`        // TMDB unique identifier (required for TMDB scraper)
+	DoubanID      string `json:"douban_id,omitempty"`      // Douban subject ID (required for Douban scraper)
+	MediaType     string `json:"media_type,omitempty"`     // Media type: movie / tv / anime (optional, default: movie)
+	Title         string `json:"title,omitempty"`          // Search or display title (optional)
+	Year          int    `json:"year,omitempty"`           // Release year (optional)
+	Language      string `json:"language,omitempty"`       // Language code, e.g. "zh-CN" (default: "zh-CN")
 	DisableNFO    bool   `json:"disable_nfo,omitempty"`    // Whether to disable generating .nfo files (default: false, meaning NFO is generated)
 	DisableImages bool   `json:"disable_images,omitempty"` // Whether to disable downloading poster and backdrop images (default: false)
 }
