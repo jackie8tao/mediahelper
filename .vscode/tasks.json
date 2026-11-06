@@ -1,0 +1,297 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "mdgen: generate test data",
+      "type": "shell",
+      "command": "go",
+      "args": [
+        "run",
+        "./tools/mdgen",
+        "gen",
+        "-o",
+        "${input:genOutputDir}",
+        "-c",
+        "${input:genCategory}",
+        "${input:genSparseFlag}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "mdgen: list presets",
+      "type": "shell",
+      "command": "go",
+      "args": [
+        "run",
+        "./tools/mdgen",
+        "list"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "mdhp: parser parse(deepseek)",
+      "type": "shell",
+      "command": "go",
+      "args": [
+        "run",
+        "./tools/mdhp",
+        "parser",
+        "parse",
+        "-t",
+        "deepseek",
+        "-k",
+        "sk-f4d9ac71c50e4af58c1873d173f49897",
+        "-i",
+        "${input:rawTitle}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "mdhp: organizer organize(local)",
+      "type": "shell",
+      "command": "go",
+      "args": [
+        "run",
+        "./tools/mdhp",
+        "organizer",
+        "organize",
+        "-t",
+        "local",
+        "--movie-dir",
+        "${input:orgTargetDir}",
+        "--tv-dir",
+        "${input:orgTargetDir}",
+        "--anime-dir",
+        "${input:orgTargetDir}",
+        "-l",
+        "${input:orgLinkMode}",
+        "-m",
+        "${input:orgMediaType}",
+        "--title",
+        "${input:orgTitle}",
+        "-y",
+        "${input:orgYear}",
+        "-r",
+        "${input:orgResolution}",
+        "--files",
+        "${input:orgFiles}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "mdhp: scraper scrape(tmdb)",
+      "type": "shell",
+      "command": "go",
+      "args": [
+        "run",
+        "./tools/mdhp",
+        "scraper",
+        "scrape",
+        "-t",
+        "tmdb",
+        "-k",
+        "${input:tmdbApiKey}",
+        "-d",
+        "${input:scrapeTargetDir}",
+        "-m",
+        "${input:scrapeMediaType}",
+        "--tmdb-id",
+        "${input:scrapeTMDBID}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "mdhp: scraper scrape(douban)",
+      "type": "shell",
+      "command": "go",
+      "args": [
+        "run",
+        "./tools/mdhp",
+        "scraper",
+        "scrape",
+        "-t",
+        "douban",
+        "-d",
+        "${input:scrapeTargetDir}",
+        "-m",
+        "${input:scrapeMediaType}",
+        "--douban-id",
+        "${input:scrapeDoubanID}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "genOutputDir",
+      "type": "promptString",
+      "description": "Enter output directory for mock media files",
+      "default": "./test_downloads"
+    },
+    {
+      "id": "genCategory",
+      "type": "pickString",
+      "description": "Select media category to generate",
+      "options": [
+        "all",
+        "movie",
+        "tv",
+        "anime",
+        "chinese"
+      ],
+      "default": "all"
+    },
+    {
+      "id": "genSparseFlag",
+      "type": "pickString",
+      "description": "Select file creation mode (Normal: 0-byte dummy; Sparse: Simulated multi-GB without disk blocks)",
+      "options": [
+        "--sparse=false",
+        "--sparse=true"
+      ],
+      "default": "--sparse=false"
+    },
+    {
+      "id": "rawTitle",
+      "type": "promptString",
+      "description": "Enter raw media filename or torrent title to parse",
+      "default": "Inception.2010.2160p.UHD.BluRay.x265-GROUP"
+    },
+    {
+      "id": "orgTargetDir",
+      "type": "promptString",
+      "description": "Enter target media library base directory",
+      "default": "./tests/library"
+    },
+    {
+      "id": "orgLinkMode",
+      "type": "pickString",
+      "description": "Select file organization link mode",
+      "options": [
+        "hardlink",
+        "copy",
+        "move",
+        "symlink"
+      ],
+      "default": "hardlink"
+    },
+    {
+      "id": "orgMediaType",
+      "type": "pickString",
+      "description": "Select media type",
+      "options": [
+        "movie",
+        "tv",
+        "anime"
+      ],
+      "default": "movie"
+    },
+    {
+      "id": "orgTitle",
+      "type": "promptString",
+      "description": "Enter media title for target directory/filename",
+      "default": "盗梦空间"
+    },
+    {
+      "id": "orgYear",
+      "type": "promptString",
+      "description": "Enter release year (0 to omit)",
+      "default": "2010"
+    },
+    {
+      "id": "orgResolution",
+      "type": "promptString",
+      "description": "Enter video resolution tag (e.g. 1080p, 4K)",
+      "default": "1080p"
+    },
+    {
+      "id": "orgFiles",
+      "type": "promptString",
+      "description": "Enter JSON array of FileItem objects",
+      "default": "[{\"file_path\":\"./test_downloads/Inception.2010.2160p.UHD.BluRay.x265.TrueHD.7.1.Atmos-GROUP.mkv\"}]"
+    },
+    {
+      "id": "scrapeTargetDir",
+      "type": "promptString",
+      "description": "Enter target media directory to scrape",
+      "default": "./tests/library/盗梦空间 (2010)"
+    },
+    {
+      "id": "scrapeMediaType",
+      "type": "pickString",
+      "description": "Select media type for scraping",
+      "options": [
+        "movie",
+        "tv",
+        "anime"
+      ],
+      "default": "movie"
+    },
+    {
+      "id": "scrapeTMDBID",
+      "type": "promptString",
+      "description": "Enter TMDB ID",
+      "default": "27205"
+    },
+    {
+      "id": "scrapeDoubanID",
+      "type": "promptString",
+      "description": "Enter Douban Subject ID",
+      "default": "3541415"
+    },
+    {
+      "id": "tmdbApiKey",
+      "type": "promptString",
+      "description": "Enter TMDB API Key",
+      "default": ""
+    }
+  ]
+}

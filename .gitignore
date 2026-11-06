@@ -26,6 +26,7 @@ data/
 # IDE
 .idea/
 .vscode/*
+!.vscode/tasks.json
 
 # OS
 Thumbs.db
