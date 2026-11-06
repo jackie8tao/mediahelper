@@ -4,18 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/jackie8tao/mediahelper/internal/scraper"
+	"github.com/jackie8tao/mediahelper/pkg/utils/tmdb"
 )
 
 var (
@@ -24,19 +22,14 @@ var (
 	episodeRegex   = regexp.MustCompile(`(?i)S(\d+)E(\d+)`)
 )
 
-// Config holds connection and scraping parameters for a TMDB client instance.
-type Config struct {
-	APIKey       string `json:"api_key"`
-	BaseURL      string `json:"base_url"`
-	ImageBaseURL string `json:"image_base_url"`
-	Language     string `json:"language"`
-	Proxy        string `json:"proxy"`
-}
+// Config aliases tmdb.Config for scraper configuration.
+type Config = tmdb.Config
 
 // Client implements scraper.Scraper for TheMovieDatabase (TMDB).
 type Client struct {
 	cfg        Config
 	httpClient *http.Client
+	apiClient  *tmdb.Client
 }
 
 func init() {
@@ -49,39 +42,19 @@ func TMDBFactory(cfgVal json.RawMessage) (scraper.Scraper, error) {
 	if err := json.Unmarshal(cfgVal, &cfgSt); err != nil {
 		return nil, err
 	}
+	return NewClient(cfgSt)
+}
 
-	if cfgSt.APIKey == "" {
-		return nil, fmt.Errorf("tmdb api_key is required")
-	}
-
-	transport := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-	}
-
-	if cfgSt.Proxy != "" {
-		proxyURL, err := url.Parse(cfgSt.Proxy)
-		if err != nil {
-			return nil, fmt.Errorf("invalid proxy URL: %w", err)
-		}
-		transport.Proxy = http.ProxyURL(proxyURL)
-	}
-
-	if cfgSt.BaseURL == "" {
-		cfgSt.BaseURL = "https://api.themoviedb.org/3"
-	}
-	if cfgSt.ImageBaseURL == "" {
-		cfgSt.ImageBaseURL = "https://image.tmdb.org/t/p/original"
-	}
-	if cfgSt.Language == "" {
-		cfgSt.Language = "zh-CN"
+// NewClient creates a new TMDB scraper Client with the given configuration.
+func NewClient(cfg Config) (*Client, error) {
+	apiClient, err := tmdb.NewClient(cfg)
+	if err != nil {
+		return nil, err
 	}
 
 	return &Client{
-		cfg: cfgSt,
-		httpClient: &http.Client{
-			Timeout:   20 * time.Second,
-			Transport: transport,
-		},
+		cfg:       cfg,
+		apiClient: apiClient,
 	}, nil
 }
 
@@ -90,10 +63,33 @@ func (c *Client) Name() string {
 	return "TMDB"
 }
 
+func (c *Client) ensureAPIClient() error {
+	if c.apiClient != nil {
+		return nil
+	}
+
+	cfg := c.cfg
+	if c.httpClient != nil {
+		cfg.HTTPClient = c.httpClient
+	}
+
+	client, err := tmdb.NewClient(cfg)
+	if err != nil {
+		return err
+	}
+	c.apiClient = client
+	return nil
+}
+
 // Scrape retrieves metadata from TMDB and writes NFO files and images into task.TargetDir.
 func (c *Client) Scrape(ctx context.Context, task scraper.ScrapeTask) (*scraper.ScrapeResult, error) {
 	result := &scraper.ScrapeResult{
 		TargetDir: task.TargetDir,
+	}
+
+	if err := c.ensureAPIClient(); err != nil {
+		result.Error = err.Error()
+		return result, err
 	}
 
 	targetDir := strings.TrimSpace(task.TargetDir)
@@ -133,7 +129,7 @@ func (c *Client) Scrape(ctx context.Context, task scraper.ScrapeTask) (*scraper.
 
 	lang := strings.TrimSpace(task.Language)
 	if lang == "" {
-		lang = c.cfg.Language
+		lang = c.apiClient.Language()
 	}
 
 	saveNFO := task.SaveNFO == nil || *task.SaveNFO
@@ -178,7 +174,7 @@ func (c *Client) Scrape(ctx context.Context, task scraper.ScrapeTask) (*scraper.
 	if saveImages {
 		if metadata.PosterURL != "" {
 			posterPath := filepath.Join(targetDir, "poster.jpg")
-			if dlErr := c.downloadImage(ctx, metadata.PosterURL, posterPath); dlErr == nil {
+			if dlErr := c.apiClient.DownloadImage(ctx, metadata.PosterURL, posterPath); dlErr == nil {
 				result.CreatedFiles = append(result.CreatedFiles, posterPath)
 			} else {
 				slog.Warn("Download poster failed", "url", metadata.PosterURL, "error", dlErr)
@@ -186,7 +182,7 @@ func (c *Client) Scrape(ctx context.Context, task scraper.ScrapeTask) (*scraper.
 		}
 		if metadata.BackdropURL != "" {
 			fanartPath := filepath.Join(targetDir, "fanart.jpg")
-			if dlErr := c.downloadImage(ctx, metadata.BackdropURL, fanartPath); dlErr == nil {
+			if dlErr := c.apiClient.DownloadImage(ctx, metadata.BackdropURL, fanartPath); dlErr == nil {
 				result.CreatedFiles = append(result.CreatedFiles, fanartPath)
 			} else {
 				slog.Warn("Download backdrop failed", "url", metadata.BackdropURL, "error", dlErr)
@@ -200,14 +196,14 @@ func (c *Client) Scrape(ctx context.Context, task scraper.ScrapeTask) (*scraper.
 
 func (c *Client) scrapeMovie(ctx context.Context, title string, year int, tmdbID int, lang string) (*scraper.MediaMetadata, error) {
 	if tmdbID <= 0 {
-		res, err := c.searchMovie(ctx, title, year, lang)
+		res, err := c.apiClient.SearchMovie(ctx, title, year, lang)
 		if err != nil {
 			return nil, err
 		}
 		if len(res.Results) == 0 {
 			// Fallback: search without year if year was set
 			if year > 0 {
-				res, _ = c.searchMovie(ctx, title, 0, lang)
+				res, _ = c.apiClient.SearchMovie(ctx, title, 0, lang)
 			}
 		}
 		if len(res.Results) == 0 {
@@ -216,7 +212,7 @@ func (c *Client) scrapeMovie(ctx context.Context, title string, year int, tmdbID
 		tmdbID = res.Results[0].ID
 	}
 
-	details, err := c.getMovieDetails(ctx, tmdbID, lang)
+	details, err := c.apiClient.GetMovieDetails(ctx, tmdbID, lang)
 	if err != nil {
 		return nil, fmt.Errorf("fetch movie details (id=%d) error: %w", tmdbID, err)
 	}
@@ -249,21 +245,17 @@ func (c *Client) scrapeMovie(ctx context.Context, title string, year int, tmdbID
 		}
 	}
 	for _, cast := range details.Credits.Cast {
-		thumb := ""
-		if cast.ProfilePath != "" {
-			thumb = strings.TrimRight(c.cfg.ImageBaseURL, "/") + cast.ProfilePath
-		}
 		meta.Actors = append(meta.Actors, scraper.Actor{
 			Name:  cast.Name,
 			Role:  cast.Character,
-			Thumb: thumb,
+			Thumb: c.apiClient.BuildImageURL(cast.ProfilePath),
 		})
 	}
 	if details.PosterPath != "" {
-		meta.PosterURL = strings.TrimRight(c.cfg.ImageBaseURL, "/") + details.PosterPath
+		meta.PosterURL = c.apiClient.BuildImageURL(details.PosterPath)
 	}
 	if details.BackdropPath != "" {
-		meta.BackdropURL = strings.TrimRight(c.cfg.ImageBaseURL, "/") + details.BackdropPath
+		meta.BackdropURL = c.apiClient.BuildImageURL(details.BackdropPath)
 	}
 
 	return meta, nil
@@ -271,12 +263,12 @@ func (c *Client) scrapeMovie(ctx context.Context, title string, year int, tmdbID
 
 func (c *Client) scrapeTV(ctx context.Context, title string, year int, tmdbID int, lang, targetDir string) (*scraper.MediaMetadata, error) {
 	if tmdbID <= 0 {
-		res, err := c.searchTV(ctx, title, year, lang)
+		res, err := c.apiClient.SearchTV(ctx, title, year, lang)
 		if err != nil {
 			return nil, err
 		}
 		if len(res.Results) == 0 && year > 0 {
-			res, _ = c.searchTV(ctx, title, 0, lang)
+			res, _ = c.apiClient.SearchTV(ctx, title, 0, lang)
 		}
 		if len(res.Results) == 0 {
 			return nil, fmt.Errorf("no TV show found on TMDB for query '%s' (%d)", title, year)
@@ -284,7 +276,7 @@ func (c *Client) scrapeTV(ctx context.Context, title string, year int, tmdbID in
 		tmdbID = res.Results[0].ID
 	}
 
-	details, err := c.getTVDetails(ctx, tmdbID, lang)
+	details, err := c.apiClient.GetTVDetails(ctx, tmdbID, lang)
 	if err != nil {
 		return nil, fmt.Errorf("fetch TV details (id=%d) error: %w", tmdbID, err)
 	}
@@ -311,21 +303,17 @@ func (c *Client) scrapeTV(ctx context.Context, title string, year int, tmdbID in
 		meta.Studios = append(meta.Studios, comp.Name)
 	}
 	for _, cast := range details.Credits.Cast {
-		thumb := ""
-		if cast.ProfilePath != "" {
-			thumb = strings.TrimRight(c.cfg.ImageBaseURL, "/") + cast.ProfilePath
-		}
 		meta.Actors = append(meta.Actors, scraper.Actor{
 			Name:  cast.Name,
 			Role:  cast.Character,
-			Thumb: thumb,
+			Thumb: c.apiClient.BuildImageURL(cast.ProfilePath),
 		})
 	}
 	if details.PosterPath != "" {
-		meta.PosterURL = strings.TrimRight(c.cfg.ImageBaseURL, "/") + details.PosterPath
+		meta.PosterURL = c.apiClient.BuildImageURL(details.PosterPath)
 	}
 	if details.BackdropPath != "" {
-		meta.BackdropURL = strings.TrimRight(c.cfg.ImageBaseURL, "/") + details.BackdropPath
+		meta.BackdropURL = c.apiClient.BuildImageURL(details.BackdropPath)
 	}
 
 	// Find required seasons in targetDir and query episodes
@@ -335,16 +323,12 @@ func (c *Client) scrapeTV(ctx context.Context, title string, year int, tmdbID in
 	}
 
 	for _, sNum := range seasons {
-		sDetails, sErr := c.getSeasonDetails(ctx, tmdbID, sNum, lang)
+		sDetails, sErr := c.apiClient.GetSeasonDetails(ctx, tmdbID, sNum, lang)
 		if sErr != nil {
 			slog.Warn("Fetch season details error", "tmdb_id", tmdbID, "season", sNum, "error", sErr)
 			continue
 		}
 		for _, ep := range sDetails.Episodes {
-			epThumb := ""
-			if ep.StillPath != "" {
-				epThumb = strings.TrimRight(c.cfg.ImageBaseURL, "/") + ep.StillPath
-			}
 			meta.Episodes = append(meta.Episodes, scraper.EpisodeMetadata{
 				Season:       sNum,
 				Episode:      ep.EpisodeNumber,
@@ -352,7 +336,7 @@ func (c *Client) scrapeTV(ctx context.Context, title string, year int, tmdbID in
 				Plot:         ep.Overview,
 				Rating:       ep.VoteAverage,
 				Aired:        ep.AirDate,
-				ThumbnailURL: epThumb,
+				ThumbnailURL: c.apiClient.BuildImageURL(ep.StillPath),
 			})
 		}
 	}
@@ -396,130 +380,6 @@ func (c *Client) writeEpisodeNFOs(targetDir string, meta *scraper.MediaMetadata,
 		}
 		return nil
 	})
-}
-
-// HTTP request helpers
-
-func (c *Client) searchMovie(ctx context.Context, title string, year int, lang string) (*searchMovieResponse, error) {
-	u, _ := url.Parse(strings.TrimRight(c.cfg.BaseURL, "/") + "/search/movie")
-	q := u.Query()
-	q.Set("api_key", c.cfg.APIKey)
-	q.Set("query", title)
-	q.Set("language", lang)
-	if year > 0 {
-		q.Set("year", strconv.Itoa(year))
-	}
-	u.RawQuery = q.Encode()
-
-	var resp searchMovieResponse
-	if err := c.doGet(ctx, u.String(), &resp); err != nil {
-		return nil, err
-	}
-	return &resp, nil
-}
-
-func (c *Client) searchTV(ctx context.Context, title string, year int, lang string) (*searchTVResponse, error) {
-	u, _ := url.Parse(strings.TrimRight(c.cfg.BaseURL, "/") + "/search/tv")
-	q := u.Query()
-	q.Set("api_key", c.cfg.APIKey)
-	q.Set("query", title)
-	q.Set("language", lang)
-	if year > 0 {
-		q.Set("first_air_date_year", strconv.Itoa(year))
-	}
-	u.RawQuery = q.Encode()
-
-	var resp searchTVResponse
-	if err := c.doGet(ctx, u.String(), &resp); err != nil {
-		return nil, err
-	}
-	return &resp, nil
-}
-
-func (c *Client) getMovieDetails(ctx context.Context, tmdbID int, lang string) (*tmdbMovieDetails, error) {
-	endpoint := fmt.Sprintf("%s/movie/%d?api_key=%s&language=%s&append_to_response=credits",
-		strings.TrimRight(c.cfg.BaseURL, "/"), tmdbID, url.QueryEscape(c.cfg.APIKey), url.QueryEscape(lang))
-
-	var details tmdbMovieDetails
-	if err := c.doGet(ctx, endpoint, &details); err != nil {
-		return nil, err
-	}
-	return &details, nil
-}
-
-func (c *Client) getTVDetails(ctx context.Context, tmdbID int, lang string) (*tmdbTVDetails, error) {
-	endpoint := fmt.Sprintf("%s/tv/%d?api_key=%s&language=%s&append_to_response=credits",
-		strings.TrimRight(c.cfg.BaseURL, "/"), tmdbID, url.QueryEscape(c.cfg.APIKey), url.QueryEscape(lang))
-
-	var details tmdbTVDetails
-	if err := c.doGet(ctx, endpoint, &details); err != nil {
-		return nil, err
-	}
-	return &details, nil
-}
-
-func (c *Client) getSeasonDetails(ctx context.Context, tmdbID, seasonNumber int, lang string) (*tmdbSeasonDetails, error) {
-	endpoint := fmt.Sprintf("%s/tv/%d/season/%d?api_key=%s&language=%s",
-		strings.TrimRight(c.cfg.BaseURL, "/"), tmdbID, seasonNumber, url.QueryEscape(c.cfg.APIKey), url.QueryEscape(lang))
-
-	var details tmdbSeasonDetails
-	if err := c.doGet(ctx, endpoint, &details); err != nil {
-		return nil, err
-	}
-	return &details, nil
-}
-
-func (c *Client) doGet(ctx context.Context, endpoint string, target any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return fmt.Errorf("create http request error: %w", err)
-	}
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("http get error: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("tmdb api returned status %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	return json.NewDecoder(resp.Body).Decode(target)
-}
-
-func (c *Client) downloadImage(ctx context.Context, imgURL, dstPath string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imgURL, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("download image returned status %d", resp.StatusCode)
-	}
-
-	tmpFile := dstPath + ".tmp"
-	out, err := os.Create(tmpFile)
-	if err != nil {
-		return err
-	}
-
-	if _, err := io.Copy(out, resp.Body); err != nil {
-		out.Close()
-		_ = os.Remove(tmpFile)
-		return err
-	}
-	out.Close()
-
-	return os.Rename(tmpFile, dstPath)
 }
 
 func detectMediaType(dirPath string) string {

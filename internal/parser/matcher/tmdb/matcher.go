@@ -4,29 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"math"
-	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/jackie8tao/mediahelper/internal/parser"
+	"github.com/jackie8tao/mediahelper/pkg/utils/tmdb"
 )
 
-// Config holds configuration parameters for the TMDB matcher.
-type Config struct {
-	APIKey   string `json:"api_key"`
-	BaseURL  string `json:"base_url"`
-	Language string `json:"language"`
-	Proxy    string `json:"proxy"`
-}
+// Config aliases tmdb.Config for TMDB matcher configuration.
+type Config = tmdb.Config
 
 // Matcher implements parser.Matcher by querying TMDB API to verify candidate metadata.
 type Matcher struct {
-	cfg        Config
-	httpClient *http.Client
+	client *tmdb.Client
 }
 
 func init() {
@@ -46,35 +37,13 @@ func TMDBMatcherFactory(cfgVal json.RawMessage) (parser.Matcher, error) {
 
 // NewMatcher creates a new TMDB Matcher instance with the given configuration.
 func NewMatcher(cfg Config) (*Matcher, error) {
-	if strings.TrimSpace(cfg.APIKey) == "" {
-		return nil, fmt.Errorf("tmdb matcher api_key is required")
-	}
-
-	transport := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-	}
-
-	if cfg.Proxy != "" {
-		proxyURL, err := url.Parse(cfg.Proxy)
-		if err != nil {
-			return nil, fmt.Errorf("invalid proxy URL for tmdb matcher: %w", err)
-		}
-		transport.Proxy = http.ProxyURL(proxyURL)
-	}
-
-	if cfg.BaseURL == "" {
-		cfg.BaseURL = "https://api.themoviedb.org/3"
-	}
-	if cfg.Language == "" {
-		cfg.Language = "zh-CN"
+	client, err := tmdb.NewClient(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("init tmdb client error: %w", err)
 	}
 
 	return &Matcher{
-		cfg: cfg,
-		httpClient: &http.Client{
-			Timeout:   15 * time.Second,
-			Transport: transport,
-		},
+		client: client,
 	}, nil
 }
 
@@ -198,30 +167,12 @@ func (m *Matcher) search(ctx context.Context, query string, year int, preferredT
 }
 
 func (m *Matcher) searchMovie(ctx context.Context, query string, year int) ([]tmdbItem, error) {
-	u, _ := url.Parse(strings.TrimRight(m.cfg.BaseURL, "/") + "/search/movie")
-	q := u.Query()
-	q.Set("api_key", m.cfg.APIKey)
-	q.Set("query", query)
-	q.Set("language", m.cfg.Language)
-	if year > 0 {
-		q.Set("year", strconv.Itoa(year))
-	}
-	u.RawQuery = q.Encode()
-
-	var resp struct {
-		Results []struct {
-			ID            int    `json:"id"`
-			Title         string `json:"title"`
-			OriginalTitle string `json:"original_title"`
-			ReleaseDate   string `json:"release_date"`
-		} `json:"results"`
-	}
-
-	if err := m.doGet(ctx, u.String(), &resp); err != nil {
+	resp, err := m.client.SearchMovie(ctx, query, year, "")
+	if err != nil {
 		return nil, err
 	}
 
-	var items []tmdbItem
+	items := make([]tmdbItem, 0, len(resp.Results))
 	for _, r := range resp.Results {
 		items = append(items, tmdbItem{
 			ID:            r.ID,
@@ -235,30 +186,12 @@ func (m *Matcher) searchMovie(ctx context.Context, query string, year int) ([]tm
 }
 
 func (m *Matcher) searchTV(ctx context.Context, query string, year int) ([]tmdbItem, error) {
-	u, _ := url.Parse(strings.TrimRight(m.cfg.BaseURL, "/") + "/search/tv")
-	q := u.Query()
-	q.Set("api_key", m.cfg.APIKey)
-	q.Set("query", query)
-	q.Set("language", m.cfg.Language)
-	if year > 0 {
-		q.Set("first_air_date_year", strconv.Itoa(year))
-	}
-	u.RawQuery = q.Encode()
-
-	var resp struct {
-		Results []struct {
-			ID           int    `json:"id"`
-			Name         string `json:"name"`
-			OriginalName string `json:"original_name"`
-			FirstAirDate string `json:"first_air_date"`
-		} `json:"results"`
-	}
-
-	if err := m.doGet(ctx, u.String(), &resp); err != nil {
+	resp, err := m.client.SearchTV(ctx, query, year, "")
+	if err != nil {
 		return nil, err
 	}
 
-	var items []tmdbItem
+	items := make([]tmdbItem, 0, len(resp.Results))
 	for _, r := range resp.Results {
 		items = append(items, tmdbItem{
 			ID:            r.ID,
@@ -272,31 +205,36 @@ func (m *Matcher) searchTV(ctx context.Context, query string, year int) ([]tmdbI
 }
 
 func (m *Matcher) findBestItem(query string, targetYear int, targetType parser.MediaType, items []tmdbItem) (*tmdbItem, float64) {
-	var best *tmdbItem
-	var maxScore = -1.0
+	if len(items) == 0 {
+		return nil, 0.0
+	}
 
-	for i := range items {
-		score := calculateScore(query, targetYear, targetType, &items[i], i)
-		if score > maxScore {
-			maxScore = score
-			best = &items[i]
+	var best *tmdbItem
+	var bestScore float64
+
+	for idx := range items {
+		item := &items[idx]
+		score := m.calculateScore(query, targetYear, targetType, item, idx)
+		if score > bestScore {
+			best = item
+			bestScore = score
 		}
 	}
-	return best, maxScore
+
+	return best, bestScore
 }
 
-func calculateScore(query string, targetYear int, targetType parser.MediaType, item *tmdbItem, rankIndex int) float64 {
+func (m *Matcher) calculateScore(query string, targetYear int, targetType parser.MediaType, item *tmdbItem, rankIndex int) float64 {
 	cleanQuery := normalizeString(query)
 	cleanTitle := normalizeString(item.Title)
 	cleanOrig := normalizeString(item.OriginalTitle)
 
 	// 1. Title Similarity (0.0 - 0.60)
-	titleScore := 0.0
+	var titleScore float64
 	if cleanQuery == cleanTitle || cleanQuery == cleanOrig {
 		titleScore = 0.60
-	} else if strings.Contains(cleanTitle, cleanQuery) || strings.Contains(cleanQuery, cleanTitle) {
-		titleScore = 0.50
-	} else if strings.Contains(cleanOrig, cleanQuery) || strings.Contains(cleanQuery, cleanOrig) {
+	} else if strings.Contains(cleanTitle, cleanQuery) || strings.Contains(cleanOrig, cleanQuery) ||
+		strings.Contains(cleanQuery, cleanTitle) || strings.Contains(cleanQuery, cleanOrig) {
 		titleScore = 0.45
 	} else {
 		sim := stringSimilarity(cleanQuery, cleanTitle)
@@ -341,27 +279,6 @@ func calculateScore(query string, targetYear int, targetType parser.MediaType, i
 	}
 
 	return titleScore + yearScore + typeScore
-}
-
-func (m *Matcher) doGet(ctx context.Context, endpoint string, target any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return fmt.Errorf("create http request error: %w", err)
-	}
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := m.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("http get error: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("tmdb api returned status %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	return json.NewDecoder(resp.Body).Decode(target)
 }
 
 func normalizeString(s string) string {

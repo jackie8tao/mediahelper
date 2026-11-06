@@ -2,103 +2,6 @@ package tmdb
 
 import "encoding/xml"
 
-// TMDB API response structures
-
-type searchMovieResponse struct {
-	Page    int               `json:"page"`
-	Results []tmdbMovieResult `json:"results"`
-}
-
-type tmdbMovieResult struct {
-	ID            int     `json:"id"`
-	Title         string  `json:"title"`
-	OriginalTitle string  `json:"original_title"`
-	ReleaseDate   string  `json:"release_date"`
-	Overview      string  `json:"overview"`
-	VoteAverage   float64 `json:"vote_average"`
-	VoteCount     int     `json:"vote_count"`
-	PosterPath    string  `json:"poster_path"`
-	BackdropPath  string  `json:"backdrop_path"`
-}
-
-type searchTVResponse struct {
-	Page    int            `json:"page"`
-	Results []tmdbTVResult `json:"results"`
-}
-
-type tmdbTVResult struct {
-	ID           int     `json:"id"`
-	Name         string  `json:"name"`
-	OriginalName string  `json:"original_name"`
-	FirstAirDate string  `json:"first_air_date"`
-	Overview     string  `json:"overview"`
-	VoteAverage  float64 `json:"vote_average"`
-	VoteCount    int     `json:"vote_count"`
-	PosterPath   string  `json:"poster_path"`
-	BackdropPath string  `json:"backdrop_path"`
-}
-
-type tmdbCredits struct {
-	Cast []struct {
-		Name        string `json:"name"`
-		Character   string `json:"character"`
-		ProfilePath string `json:"profile_path"`
-	} `json:"cast"`
-	Crew []struct {
-		Name string `json:"name"`
-		Job  string `json:"job"`
-	} `json:"crew"`
-}
-
-type tmdbMovieDetails struct {
-	ID                  int     `json:"id"`
-	Title               string  `json:"title"`
-	OriginalTitle       string  `json:"original_title"`
-	ReleaseDate         string  `json:"release_date"`
-	Overview            string  `json:"overview"`
-	VoteAverage         float64 `json:"vote_average"`
-	VoteCount           int     `json:"vote_count"`
-	PosterPath          string  `json:"poster_path"`
-	BackdropPath        string  `json:"backdrop_path"`
-	IMDbID              string  `json:"imdb_id"`
-	Genres              []struct{ Name string } `json:"genres"`
-	ProductionCompanies []struct{ Name string } `json:"production_companies"`
-	Credits             tmdbCredits             `json:"credits"`
-}
-
-type tmdbTVDetails struct {
-	ID                  int     `json:"id"`
-	Name                string  `json:"name"`
-	OriginalName        string  `json:"original_name"`
-	FirstAirDate        string  `json:"first_air_date"`
-	Overview            string  `json:"overview"`
-	VoteAverage         float64 `json:"vote_average"`
-	VoteCount           int     `json:"vote_count"`
-	PosterPath          string  `json:"poster_path"`
-	BackdropPath        string  `json:"backdrop_path"`
-	Genres              []struct{ Name string } `json:"genres"`
-	ProductionCompanies []struct{ Name string } `json:"production_companies"`
-	Credits             tmdbCredits             `json:"credits"`
-	Seasons             []struct {
-		SeasonNumber int `json:"season_number"`
-		EpisodeCount int `json:"episode_count"`
-	} `json:"seasons"`
-}
-
-type tmdbSeasonDetails struct {
-	SeasonNumber int               `json:"season_number"`
-	Episodes     []tmdbEpisodeItem `json:"episodes"`
-}
-
-type tmdbEpisodeItem struct {
-	EpisodeNumber int     `json:"episode_number"`
-	Name          string  `json:"name"`
-	Overview      string  `json:"overview"`
-	VoteAverage   float64 `json:"vote_average"`
-	AirDate       string  `json:"air_date"`
-	StillPath     string  `json:"still_path"`
-}
-
 // NFO XML structures for Kodi / Jellyfin / Emby
 
 type nfoUniqueID struct {
@@ -158,4 +61,3 @@ type episodeNFO struct {
 	Aired     string        `xml:"aired,omitempty"`
 	UniqueIDs []nfoUniqueID `xml:"uniqueid,omitempty"`
 }
-
